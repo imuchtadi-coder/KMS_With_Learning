@@ -1,0 +1,110 @@
+{
+  "_UserProfile-BospVrxj.css": {
+    "file": "assets/UserProfile-BospVrxj.css",
+    "src": "_UserProfile-BospVrxj.css"
+  },
+  "_UserProfile-CxvZGLjJ.js": {
+    "file": "assets/UserProfile-CxvZGLjJ.js",
+    "name": "UserProfile",
+    "imports": [
+      "resources/js/app.js",
+      "_vendor-C7NrZO2c.js",
+      "_vuetify-SD8_b3UN.js"
+    ],
+    "css": [
+      "assets/UserProfile-BospVrxj.css"
+    ]
+  },
+  "_vendor-C7NrZO2c.js": {
+    "file": "assets/vendor-C7NrZO2c.js",
+    "name": "vendor"
+  },
+  "_vuetify-SD8_b3UN.js": {
+    "file": "assets/vuetify-SD8_b3UN.js",
+    "name": "vuetify",
+    "imports": [
+      "_vendor-C7NrZO2c.js"
+    ]
+  },
+  "node_modules/@mdi/font/fonts/materialdesignicons-webfont.eot": {
+    "file": "assets/materialdesignicons-webfont-CSr8KVlo.eot",
+    "src": "node_modules/@mdi/font/fonts/materialdesignicons-webfont.eot"
+  },
+  "node_modules/@mdi/font/fonts/materialdesignicons-webfont.ttf": {
+    "file": "assets/materialdesignicons-webfont-B7mPwVP_.ttf",
+    "src": "node_modules/@mdi/font/fonts/materialdesignicons-webfont.ttf"
+  },
+  "node_modules/@mdi/font/fonts/materialdesignicons-webfont.woff": {
+    "file": "assets/materialdesignicons-webfont-PXm3-2wK.woff",
+    "src": "node_modules/@mdi/font/fonts/materialdesignicons-webfont.woff"
+  },
+  "node_modules/@mdi/font/fonts/materialdesignicons-webfont.woff2": {
+    "file": "assets/materialdesignicons-webfont-Dp5v-WZN.woff2",
+    "src": "node_modules/@mdi/font/fonts/materialdesignicons-webfont.woff2"
+  },
+  "node_modules/hls.js/dist/hls.mjs": {
+    "file": "assets/hls-D1fSjlvU.js",
+    "name": "hls",
+    "src": "node_modules/hls.js/dist/hls.mjs",
+    "isDynamicEntry": true
+  },
+  "resources/images/pages/boy-with-laptop-dark.png": {
+    "file": "assets/boy-with-laptop-dark-CtdkfonZ.png",
+    "src": "resources/images/pages/boy-with-laptop-dark.png"
+  },
+  "resources/images/pages/boy-with-laptop-light.png": {
+    "file": "assets/boy-with-laptop-light-CYrz2ViJ.png",
+    "src": "resources/images/pages/boy-with-laptop-light.png"
+  },
+  "resources/js/app.js": {
+    "file": "assets/app-CobV2__f.js",
+    "name": "app",
+    "src": "resources/js/app.js",
+    "isEntry": true,
+    "imports": [
+      "_vendor-C7NrZO2c.js",
+      "_vuetify-SD8_b3UN.js"
+    ],
+    "dynamicImports": [
+      "node_modules/hls.js/dist/hls.mjs",
+      "node_modules/hls.js/dist/hls.mjs",
+      "resources/js/layouts/components/DefaultLayoutWithHorizontalNav.vue",
+      "resources/js/layouts/components/DefaultLayoutWithVerticalNav.vue"
+    ],
+    "css": [
+      "assets/app-BDOPZ-kG.css"
+    ],
+    "assets": [
+      "assets/boy-with-laptop-light-CYrz2ViJ.png",
+      "assets/boy-with-laptop-dark-CtdkfonZ.png",
+      "assets/materialdesignicons-webfont-CSr8KVlo.eot",
+      "assets/materialdesignicons-webfont-Dp5v-WZN.woff2",
+      "assets/materialdesignicons-webfont-PXm3-2wK.woff",
+      "assets/materialdesignicons-webfont-B7mPwVP_.ttf"
+    ]
+  },
+  "resources/js/layouts/components/DefaultLayoutWithHorizontalNav.vue": {
+    "file": "assets/DefaultLayoutWithHorizontalNav-CTSHXRpx.js",
+    "name": "DefaultLayoutWithHorizontalNav",
+    "src": "resources/js/layouts/components/DefaultLayoutWithHorizontalNav.vue",
+    "isDynamicEntry": true,
+    "imports": [
+      "resources/js/app.js",
+      "_UserProfile-CxvZGLjJ.js",
+      "_vendor-C7NrZO2c.js",
+      "_vuetify-SD8_b3UN.js"
+    ]
+  },
+  "resources/js/layouts/components/DefaultLayoutWithVerticalNav.vue": {
+    "file": "assets/DefaultLayoutWithVerticalNav-DfqLrQ1n.js",
+    "name": "DefaultLayoutWithVerticalNav",
+    "src": "resources/js/layouts/components/DefaultLayoutWithVerticalNav.vue",
+    "isDynamicEntry": true,
+    "imports": [
+      "resources/js/app.js",
+      "_UserProfile-CxvZGLjJ.js",
+      "_vendor-C7NrZO2c.js",
+      "_vuetify-SD8_b3UN.js"
+    ]
+  }
+}

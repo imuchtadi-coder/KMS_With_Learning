@@ -1,0 +1,58 @@
+export default [
+  {
+    title: 'Learning',
+    icon: { icon: 'tabler-player-play' },
+    href: '/student',
+    action: 'student',
+    subject: 'role',
+  },
+  {
+    title: 'Courses',
+    icon: { icon: 'tabler-book' },
+    href: '/student/courses',
+    action: 'student',
+    subject: 'role',
+  },
+  {
+    title: 'My Learning',
+    icon: { icon: 'tabler-clipboard-list' },
+    href: '/student/enrollments',
+    action: 'student',
+    subject: 'role',
+  },
+  {
+    title: 'Learning Paths',
+    icon: { icon: 'tabler-road' },
+    href: '/student/learning-paths',
+    action: 'student',
+    subject: 'role',
+  },
+  {
+    title: 'My Grades',
+    icon: { icon: 'tabler-chart-bar' },
+    href: '/student/grades',
+    action: 'student',
+    subject: 'role',
+  },
+  {
+    title: 'Live Classes',
+    icon: { icon: 'tabler-video' },
+    href: '/student/live-classes',
+    action: 'student',
+    subject: 'role',
+  },
+  {
+    title: 'Gamification',
+    icon: { icon: 'tabler-star' },
+    href: '/student/gamification',
+    action: 'student',
+    subject: 'role',
+  },
+  {
+    title: 'Leaderboard',
+    icon: { icon: 'tabler-rankings' },
+    href: '/student/leaderboard',
+    action: 'student',
+    subject: 'role',
+  },
+]

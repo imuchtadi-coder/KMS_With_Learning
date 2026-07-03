@@ -1,0 +1,20 @@
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+
+class Domain extends Model
+{
+    protected $fillable = ['tenant_id', 'domain'];
+    public $timestamps = false;
+
+    /**
+     * Get the tenant that owns this domain
+     */
+    public function tenant(): BelongsTo
+    {
+        return $this->belongsTo(Tenant::class);
+    }
+}
