@@ -3,27 +3,27 @@
     "file": "assets/UserProfile-BospVrxj.css",
     "src": "_UserProfile-BospVrxj.css"
   },
-  "_UserProfile-CxvZGLjJ.js": {
-    "file": "assets/UserProfile-CxvZGLjJ.js",
+  "_UserProfile-CfV5iVD9.js": {
+    "file": "assets/UserProfile-CfV5iVD9.js",
     "name": "UserProfile",
     "imports": [
       "resources/js/app.js",
-      "_vendor-C7NrZO2c.js",
-      "_vuetify-SD8_b3UN.js"
+      "_vendor-CfBrzgBQ.js",
+      "_vuetify-Tv8P5Rv7.js"
     ],
     "css": [
       "assets/UserProfile-BospVrxj.css"
     ]
   },
-  "_vendor-C7NrZO2c.js": {
-    "file": "assets/vendor-C7NrZO2c.js",
+  "_vendor-CfBrzgBQ.js": {
+    "file": "assets/vendor-CfBrzgBQ.js",
     "name": "vendor"
   },
-  "_vuetify-SD8_b3UN.js": {
-    "file": "assets/vuetify-SD8_b3UN.js",
+  "_vuetify-Tv8P5Rv7.js": {
+    "file": "assets/vuetify-Tv8P5Rv7.js",
     "name": "vuetify",
     "imports": [
-      "_vendor-C7NrZO2c.js"
+      "_vendor-CfBrzgBQ.js"
     ]
   },
   "node_modules/@mdi/font/fonts/materialdesignicons-webfont.eot": {
@@ -48,22 +48,14 @@
     "src": "node_modules/hls.js/dist/hls.mjs",
     "isDynamicEntry": true
   },
-  "resources/images/pages/boy-with-laptop-dark.png": {
-    "file": "assets/boy-with-laptop-dark-CtdkfonZ.png",
-    "src": "resources/images/pages/boy-with-laptop-dark.png"
-  },
-  "resources/images/pages/boy-with-laptop-light.png": {
-    "file": "assets/boy-with-laptop-light-CYrz2ViJ.png",
-    "src": "resources/images/pages/boy-with-laptop-light.png"
-  },
   "resources/js/app.js": {
-    "file": "assets/app-CobV2__f.js",
+    "file": "assets/app-Bj0egNUI.js",
     "name": "app",
     "src": "resources/js/app.js",
     "isEntry": true,
     "imports": [
-      "_vendor-C7NrZO2c.js",
-      "_vuetify-SD8_b3UN.js"
+      "_vendor-CfBrzgBQ.js",
+      "_vuetify-Tv8P5Rv7.js"
     ],
     "dynamicImports": [
       "node_modules/hls.js/dist/hls.mjs",
@@ -72,11 +64,9 @@
       "resources/js/layouts/components/DefaultLayoutWithVerticalNav.vue"
     ],
     "css": [
-      "assets/app-BDOPZ-kG.css"
+      "assets/app-B63rxtSK.css"
     ],
     "assets": [
-      "assets/boy-with-laptop-light-CYrz2ViJ.png",
-      "assets/boy-with-laptop-dark-CtdkfonZ.png",
       "assets/materialdesignicons-webfont-CSr8KVlo.eot",
       "assets/materialdesignicons-webfont-Dp5v-WZN.woff2",
       "assets/materialdesignicons-webfont-PXm3-2wK.woff",
@@ -84,27 +74,27 @@
     ]
   },
   "resources/js/layouts/components/DefaultLayoutWithHorizontalNav.vue": {
-    "file": "assets/DefaultLayoutWithHorizontalNav-CTSHXRpx.js",
+    "file": "assets/DefaultLayoutWithHorizontalNav-C6dpqwd1.js",
     "name": "DefaultLayoutWithHorizontalNav",
     "src": "resources/js/layouts/components/DefaultLayoutWithHorizontalNav.vue",
     "isDynamicEntry": true,
     "imports": [
       "resources/js/app.js",
-      "_UserProfile-CxvZGLjJ.js",
-      "_vendor-C7NrZO2c.js",
-      "_vuetify-SD8_b3UN.js"
+      "_UserProfile-CfV5iVD9.js",
+      "_vendor-CfBrzgBQ.js",
+      "_vuetify-Tv8P5Rv7.js"
     ]
   },
   "resources/js/layouts/components/DefaultLayoutWithVerticalNav.vue": {
-    "file": "assets/DefaultLayoutWithVerticalNav-DfqLrQ1n.js",
+    "file": "assets/DefaultLayoutWithVerticalNav-lq5Q55hW.js",
     "name": "DefaultLayoutWithVerticalNav",
     "src": "resources/js/layouts/components/DefaultLayoutWithVerticalNav.vue",
     "isDynamicEntry": true,
     "imports": [
       "resources/js/app.js",
-      "_UserProfile-CxvZGLjJ.js",
-      "_vendor-C7NrZO2c.js",
-      "_vuetify-SD8_b3UN.js"
+      "_UserProfile-CfV5iVD9.js",
+      "_vendor-CfBrzgBQ.js",
+      "_vuetify-Tv8P5Rv7.js"
     ]
   }
 }

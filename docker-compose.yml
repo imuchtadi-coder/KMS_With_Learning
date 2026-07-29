@@ -1,73 +1,100 @@
-services:
+x-app-service: &app-service
+  image: kitsuluh-app:${APP_IMAGE_TAG:-latest}
+  build:
+    context: .
+    target: app
+  restart: unless-stopped
+  env_file:
+    - ${APP_ENV_FILE:-.env}
+  networks:
+    - backend
+  volumes:
+    - storage-data:/var/www/storage
+    - bootstrap-cache:/var/www/bootstrap/cache
 
+services:
   app:
-    build: .
-    container_name: kitsuluh-app
-    restart: always
-    working_dir: /var/www
-    volumes:
-      - ./:/var/www
-    networks:
-      - kitsuluh
+    <<: *app-service
+    healthcheck:
+      test: ["CMD", "php-fpm", "-t"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+    depends_on:
+      postgres:
+        condition: service_healthy
 
   nginx:
-    image: nginx:alpine
-    container_name: kitsuluh-nginx
-    restart: always
-    volumes:
-      - ./:/var/www
-      - ./docker/nginx/default.conf:/etc/nginx/conf.d/default.conf
+    image: kitsuluh-web:${APP_IMAGE_TAG:-latest}
+    build:
+      context: .
+      target: web
+    restart: unless-stopped
+    expose:
+      - "80"
     networks:
-      - kitsuluh
+      - web
+      - backend
+    volumes:
+      - storage-data:/var/www/storage:ro
     depends_on:
-      - app
-    ports:
-      - "80:80"
+      app:
+        condition: service_healthy
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=${TRAEFIK_NETWORK:-web}"
+      - "traefik.http.routers.kitsuluh-http.rule=Host(`${APP_DOMAIN:-kitsuluh.krakatau-it.co.id}`)"
+      - "traefik.http.routers.kitsuluh-http.entrypoints=${TRAEFIK_HTTP_ENTRYPOINT:-web}"
+      - "traefik.http.routers.kitsuluh-http.middlewares=kitsuluh-https-redirect"
+      - "traefik.http.middlewares.kitsuluh-https-redirect.redirectscheme.scheme=https"
+      - "traefik.http.middlewares.kitsuluh-https-redirect.redirectscheme.permanent=true"
+      - "traefik.http.routers.kitsuluh.rule=Host(`${APP_DOMAIN:-kitsuluh.krakatau-it.co.id}`)"
+      - "traefik.http.routers.kitsuluh.entrypoints=${TRAEFIK_HTTPS_ENTRYPOINT:-websecure}"
+      - "traefik.http.routers.kitsuluh.tls=true"
+      - "traefik.http.services.kitsuluh.loadbalancer.server.port=80"
 
   scheduler:
-    build: .
-    container_name: kitsuluh-scheduler
-    restart: always
-    working_dir: /var/www
+    <<: *app-service
     command: php artisan schedule:work
-    volumes:
-      - ./:/var/www
-    networks:
-      - kitsuluh
     depends_on:
-      - postgres
+      postgres:
+        condition: service_healthy
 
   queue-worker:
-    build: .
-    container_name: kitsuluh-queue
-    restart: always
-    working_dir: /var/www
-    command: php artisan queue:work --tries=3 --timeout=3600
-    volumes:
-      - ./:/var/www
-    networks:
-      - kitsuluh
+    <<: *app-service
+    command: php artisan queue:work --tries=3 --timeout=3600 --sleep=3
+    stop_grace_period: 1h
     depends_on:
-      - postgres
+      postgres:
+        condition: service_healthy
 
   postgres:
-    image: postgres:15
-    container_name: kitsuluh-postgres
-    restart: always
+    image: postgres:15-alpine
+    restart: unless-stopped
     environment:
-      POSTGRES_USER: kitsuluh
-      POSTGRES_PASSWORD: secret123
-      POSTGRES_DB: lmskit
-    ports:
-      - "5432:5432"
+      POSTGRES_USER: ${DB_USERNAME}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_DATABASE}
     networks:
-      - kitsuluh
+      - backend
     volumes:
       - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME} -d ${DB_DATABASE}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
 
 volumes:
   pgdata:
+  storage-data:
+  bootstrap-cache:
 
 networks:
-  kitsuluh:
+  web:
     external: true
+    name: ${TRAEFIK_NETWORK:-web}
+  backend:
+    driver: bridge

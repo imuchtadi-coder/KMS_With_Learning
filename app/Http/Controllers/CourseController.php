@@ -5,28 +5,40 @@ namespace App\Http\Controllers;
 use App\Models\Course;
 use App\Models\Enrollment;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Gate;
 
 class CourseController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $courses = Course::where('published', true)
+        $courses = Course::query()
+            ->where('tenant_id', $request->user()->tenant_id)
+            ->where('published', true)
             ->with(['sections.lessons'])
             ->paginate(12);
 
         return response()->json($courses);
     }
 
-    public function show(Course $course)
+    public function show(Request $request, Course $course)
     {
+        Gate::forUser($request->user())->authorize('view', $course);
+
         return response()->json(
-            $course->load(['sections.lessons.videos', 'enrollments'])
+            $course->load([
+                'sections.lessons.videos' => fn ($query) => $query
+                    ->select('id', 'lesson_id', 'title', 'duration_seconds', 'status'),
+            ])
         );
     }
 
     public function enroll(Request $request, Course $course)
     {
         $user = $request->user();
+
+        Gate::forUser($user)->authorize('view', $course);
+
+        abort_unless($course->published, 404);
 
         $enrollment = Enrollment::firstOrCreate([
             'user_id' => $user->id,
@@ -54,6 +66,8 @@ class CourseController extends Controller
 
     public function store(Request $request)
     {
+        Gate::forUser($request->user())->authorize('create', Course::class);
+
         $validated = $request->validate([
             'title' => 'required|string|max:255',
             'slug' => 'required|string|unique:courses',
@@ -62,7 +76,12 @@ class CourseController extends Controller
             'level' => 'required|in:beginner,intermediate,advanced',
         ]);
 
-        $course = Course::create($validated);
+        $course = Course::create([
+            ...$validated,
+            'tenant_id' => $request->user()->tenant_id,
+            'created_by' => $request->user()->id,
+            'published' => false,
+        ]);
 
         return response()->json([
             'message' => 'Course created successfully',
@@ -72,12 +91,13 @@ class CourseController extends Controller
 
     public function update(Request $request, Course $course)
     {
+        Gate::forUser($request->user())->authorize('update', $course);
+
         $validated = $request->validate([
             'title' => 'sometimes|string|max:255',
             'description' => 'sometimes|string',
             'price' => 'sometimes|numeric|min:0',
             'level' => 'sometimes|in:beginner,intermediate,advanced',
-            'published' => 'sometimes|boolean',
         ]);
 
         $course->update($validated);

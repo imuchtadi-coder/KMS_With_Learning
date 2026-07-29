@@ -29,7 +29,7 @@ class UserSeeder extends Seeder
             ['email' => 'superadmin@krakatau-it.co.id'],
             [
                 'name' => 'Super Admin',
-                'password' => Hash::make('@lM4brur1'),
+                'password' => Hash::make('k1t4B1s4@2026'),
                 'email_verified_at' => now(),
                 'tenant_id' => null, // Superadmin tidak diikat ke tenant tertentu
             ]

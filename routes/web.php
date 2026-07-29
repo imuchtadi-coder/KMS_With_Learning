@@ -1,56 +1,42 @@
 <?php
 
-use App\Http\Controllers\WebAuthController;
-use App\Http\Controllers\AdminController;
-use App\Http\Controllers\InstructorCourseController;
-use App\Http\Controllers\StudentCourseController;
-use App\Http\Controllers\StudentCourseReviewController;
-use App\Http\Controllers\MaterialController;
-use App\Http\Controllers\CertificateController;
-use App\Http\Controllers\VideoController;
-use App\Http\Controllers\LearningPathController;
-use App\Http\Controllers\ProgressController;
-use App\Http\Controllers\StudentLearningPathController;
-use App\Http\Controllers\LearningPathAnalyticsController;
-use App\Http\Controllers\InstructorQuestionController;
-use App\Http\Controllers\InstructorQuizController;
-use App\Http\Controllers\InstructorExamController;
-use App\Http\Controllers\InstructorLiveClassController;
-use App\Http\Controllers\StudentLiveClassController;
-use App\Http\Controllers\InstructorAssignmentController;
-use App\Http\Controllers\InstructorGradebookController;
-use App\Http\Controllers\AssessmentAnalyticsController;
-use App\Http\Controllers\StudentQuizController;
-use App\Http\Controllers\StudentAssignmentController;
-use App\Http\Controllers\StudentGradeController;
-use App\Http\Controllers\StudentGamificationController;
-use App\Http\Controllers\StudentLeaderboardController;
-use App\Http\Controllers\DiscussionController;
-use App\Http\Controllers\DiscussionReplyController;
-use App\Http\Controllers\NotificationController;
-use App\Http\Controllers\SearchController;
 use App\Http\Controllers\Admin\AuditLogController;
+use App\Http\Controllers\Admin\BadgeController;
 use App\Http\Controllers\Admin\BulkOperationController;
 use App\Http\Controllers\Admin\CategoryController;
-use App\Http\Controllers\Admin\TagController;
-use App\Http\Controllers\Admin\BadgeController;
 use App\Http\Controllers\Admin\GamificationController;
+use App\Http\Controllers\Admin\TagController;
+use App\Http\Controllers\AdminController;
+use App\Http\Controllers\AssessmentAnalyticsController;
+use App\Http\Controllers\CertificateController;
+use App\Http\Controllers\DiscussionController;
+use App\Http\Controllers\DiscussionReplyController;
+use App\Http\Controllers\InstructorAssignmentController;
+use App\Http\Controllers\InstructorCourseController;
+use App\Http\Controllers\InstructorExamController;
+use App\Http\Controllers\InstructorGradebookController;
+use App\Http\Controllers\InstructorLiveClassController;
+use App\Http\Controllers\InstructorQuestionController;
+use App\Http\Controllers\InstructorQuizController;
+use App\Http\Controllers\LearningPathAnalyticsController;
+use App\Http\Controllers\LearningPathController;
+use App\Http\Controllers\MaterialController;
+use App\Http\Controllers\NotificationController;
+use App\Http\Controllers\SearchController;
+use App\Http\Controllers\StudentAssignmentController;
+use App\Http\Controllers\StudentCourseController;
+use App\Http\Controllers\StudentCourseReviewController;
+use App\Http\Controllers\StudentGamificationController;
+use App\Http\Controllers\StudentGradeController;
+use App\Http\Controllers\StudentLeaderboardController;
+use App\Http\Controllers\StudentLearningPathController;
+use App\Http\Controllers\StudentLiveClassController;
+use App\Http\Controllers\StudentQuizController;
+use App\Http\Controllers\UserProfileController;
+use App\Http\Controllers\VideoController;
+use App\Http\Controllers\WebAuthController;
 use Illuminate\Support\Facades\Route;
-
-Route::get('/debug-https', function () {
-    return request()->getScheme();
-});
-
-// Test route for debugging
-Route::get('/test-publish/{id}', function ($id) {
-    $path = \App\Models\LearningPath::find($id);
-    if (!$path) {
-        return 'Learning path not found';
-    }
-
-    $path->publish();
-    return 'Published successfully! Check logs for details.';
-});
+use Inertia\Inertia;
 
 Route::get('/', function () {
     return redirect('/login');
@@ -71,10 +57,10 @@ Route::middleware('auth')->group(function () {
     Route::get('/', [WebAuthController::class, 'dashboard'])->name('dashboard');
 
     // User Profile routes
-    Route::get('/profile', [App\Http\Controllers\UserProfileController::class, 'show'])->name('profile.show');
-    Route::get('/profile/edit', [App\Http\Controllers\UserProfileController::class, 'edit'])->name('profile.edit');
-    Route::put('/profile', [App\Http\Controllers\UserProfileController::class, 'update'])->name('profile.update');
-    Route::put('/profile/password', [App\Http\Controllers\UserProfileController::class, 'updatePassword'])->name('profile.update-password');
+    Route::get('/profile', [UserProfileController::class, 'show'])->name('profile.show');
+    Route::get('/profile/edit', [UserProfileController::class, 'edit'])->name('profile.edit');
+    Route::put('/profile', [UserProfileController::class, 'update'])->name('profile.update');
+    Route::put('/profile/password', [UserProfileController::class, 'updatePassword'])->name('profile.update-password');
 
     // Admin routes (superadmin + tenant_admin)
     Route::middleware('role:superadmin|tenant_admin')->group(function () {
@@ -341,5 +327,5 @@ Route::middleware('auth')->group(function () {
 
 // Test Inertia page
 Route::middleware(['web'])->get('/inertia-test', function () {
-    return \Inertia\Inertia::render('Welcome');
+    return Inertia::render('Welcome');
 });

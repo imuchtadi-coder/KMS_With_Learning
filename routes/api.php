@@ -1,12 +1,12 @@
 <?php
 
+use App\Http\Controllers\Api\HealthController;
+use App\Http\Controllers\AuthController;
+use App\Http\Controllers\CourseController;
+use App\Http\Controllers\ProgressController;
+use App\Http\Controllers\VideoController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\CourseController;
-use App\Http\Controllers\VideoController;
-use App\Http\Controllers\ProgressController;
-use App\Http\Controllers\AuthController;
-use App\Http\Controllers\Api\HealthController;
 
 // Health check (no auth required)
 Route::get('/health', HealthController::class);
@@ -35,7 +35,7 @@ Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () {
     // Video endpoints
     Route::post('/videos/upload', [VideoController::class, 'upload']);
     Route::get('/videos/{video}/play', [VideoController::class, 'play']);
-    Route::get('/videos/{videoId}/status', [VideoController::class, 'status']);
+    Route::get('/videos/{video}/status', [VideoController::class, 'status']);
 
     // Progress endpoints
     Route::post('/progress', [ProgressController::class, 'update']);

@@ -2,24 +2,22 @@
 
 namespace App\Policies;
 
-use App\Models\User;
 use App\Models\Course;
+use App\Models\User;
 
 class CoursePolicy
 {
     /**
      * Create a new policy instance.
      */
-    public function __construct()
-    {
-    }
+    public function __construct() {}
 
     /**
      * Only instructor can create course
      */
     public function create(User $user): bool
     {
-        return $user->hasRole('instructor');
+        return $user->tenant_id !== null && $user->hasRole('instructor');
     }
 
     /**
@@ -57,9 +55,13 @@ class CoursePolicy
      */
     public function view(User $user, Course $course): bool
     {
+        if ($user->tenant_id === null || $user->tenant_id !== $course->tenant_id) {
+            return false;
+        }
+
         // Published courses - anyone in same tenant
         if ($course->published) {
-            return $user->tenant_id === $course->tenant_id;
+            return true;
         }
 
         // Draft courses - only creator or tenant admin
