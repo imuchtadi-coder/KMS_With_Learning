@@ -95,7 +95,7 @@ services:
     pull_policy: build
     restart: unless-stopped
     volumes:
-      - storage-data:/var/www/storage:ro
+      - suluh-storage-data:/var/www/storage:ro
     networks:
       - internal
       - web
