@@ -42,17 +42,29 @@ services:
       app:
         condition: service_healthy
     labels:
-      - "traefik.enable=true"
-      - "traefik.docker.network=${TRAEFIK_NETWORK:-web}"
-      - "traefik.http.routers.kitsuluh-http.rule=Host(`${APP_DOMAIN:-kitsuluh.krakatau-it.co.id}`)"
-      - "traefik.http.routers.kitsuluh-http.entrypoints=${TRAEFIK_HTTP_ENTRYPOINT:-web}"
-      - "traefik.http.routers.kitsuluh-http.middlewares=kitsuluh-https-redirect"
-      - "traefik.http.middlewares.kitsuluh-https-redirect.redirectscheme.scheme=https"
-      - "traefik.http.middlewares.kitsuluh-https-redirect.redirectscheme.permanent=true"
-      - "traefik.http.routers.kitsuluh.rule=Host(`${APP_DOMAIN:-kitsuluh.krakatau-it.co.id}`)"
-      - "traefik.http.routers.kitsuluh.entrypoints=${TRAEFIK_HTTPS_ENTRYPOINT:-websecure}"
-      - "traefik.http.routers.kitsuluh.tls=true"
-      - "traefik.http.services.kitsuluh.loadbalancer.server.port=80"
+      - traefik.enable=true
+      - traefik.docker.network=web
+      - traefik.http.routers.kitsuluh-prod.rule=Host(`kitsuluh.krakatau-it.co.id`)
+      - traefik.http.routers.kitsuluh-prod.entrypoints=web
+      - traefik.http.services.kitsuluh-prod.loadbalancer.server.port=80
+
+      # - "traefik.enable=true"
+      # - "traefik.docker.network=${TRAEFIK_NETWORK:-web}"
+      # # Use deployment-specific names because Traefik router, middleware, and
+      # # service names are global across every container on the shared network.
+      # # Public HTTPS terminates at Cloudflare. The shared Traefik origin only
+      # # accepts HTTP, so this router must not enable TLS or redirect to HTTPS.
+      # - "traefik.http.routers.kitsuluh-prod.rule=Host(`${APP_DOMAIN:-kitsuluh.krakatau-it.co.id}`)"
+      # - "traefik.http.routers.kitsuluh-prod.entrypoints=${TRAEFIK_HTTP_ENTRYPOINT:-web}"
+      # - "traefik.http.routers.kitsuluh-prod.middlewares=kitsuluh-prod-forwarded-https"
+      # - "traefik.http.routers.kitsuluh-prod.priority=1000"
+      # - "traefik.http.routers.kitsuluh-prod.service=kitsuluh-prod-web"
+      # # Preserve the public scheme seen by the browser. Laravel therefore
+      # # generates HTTPS URLs and accepts secure cookies although the hop from
+      # # Cloudflare to Traefik is plain HTTP.
+      # - "traefik.http.middlewares.kitsuluh-prod-forwarded-https.headers.customrequestheaders.X-Forwarded-Proto=https"
+      # - "traefik.http.middlewares.kitsuluh-prod-forwarded-https.headers.customrequestheaders.X-Forwarded-Port=443"
+      # - "traefik.http.services.kitsuluh-prod-web.loadbalancer.server.port=80"
 
   scheduler:
     <<: *app-service
