@@ -1,6 +1,8 @@
+# syntax=docker/dockerfile:1.7
+
 FROM node:22-alpine AS frontend
 
-WORKDIR /build
+WORKDIR /app
 
 COPY package.json package-lock.json ./
 RUN npm ci --no-audit --no-fund
@@ -9,28 +11,14 @@ COPY . .
 RUN npm run build
 
 
-FROM composer:2 AS composer-dependencies
-
-WORKDIR /build
-
-COPY composer.json composer.lock ./
-RUN composer install \
-    --no-dev \
-    --no-interaction \
-    --no-scripts \
-    --prefer-dist \
-    --optimize-autoloader
-
-
-FROM php:8.4-fpm-bookworm AS app
-
-WORKDIR /var/www
+FROM php:8.4-fpm-bookworm AS php-base
 
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
         ffmpeg \
         libpq-dev \
         libzip-dev \
+        postgresql-client \
         unzip \
     && docker-php-ext-install -j"$(nproc)" \
         opcache \
@@ -41,23 +29,44 @@ RUN apt-get update \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
-COPY docker/php/production.ini /usr/local/etc/php/conf.d/99-kitsuluh.ini
-COPY --chown=www-data:www-data . .
-COPY --from=composer-dependencies --chown=www-data:www-data /build/vendor ./vendor
-COPY --from=frontend --chown=www-data:www-data /build/public/build ./public/build
 
-RUN mkdir -p \
+FROM php-base AS vendor
+
+COPY --from=composer:2 /usr/bin/composer /usr/local/bin/composer
+
+WORKDIR /app
+
+COPY composer.json composer.lock ./
+RUN composer install \
+    --no-dev \
+    --no-interaction \
+    --no-progress \
+    --no-scripts \
+    --prefer-dist \
+    --optimize-autoloader
+
+
+FROM php-base AS app
+
+WORKDIR /var/www
+
+COPY --chown=www-data:www-data . .
+COPY --from=vendor --chown=www-data:www-data /app/vendor ./vendor
+COPY --from=frontend --chown=www-data:www-data /app/public/build ./public/build
+COPY docker/php/production.ini /usr/local/etc/php/conf.d/99-kitsuluh.ini
+COPY docker/php/entrypoint.sh /usr/local/bin/app-entrypoint
+
+RUN chmod +x /usr/local/bin/app-entrypoint \
+    && mkdir -p \
         storage/app/public \
         storage/framework/cache \
         storage/framework/sessions \
         storage/framework/views \
         storage/logs \
         bootstrap/cache \
-    && ln -sfn ../storage/app/public public/storage \
-    && chown -R www-data:www-data storage bootstrap/cache \
-    && chmod -R ug+rwX storage bootstrap/cache \
-    && php artisan package:discover --ansi
+    && chown -R www-data:www-data storage bootstrap/cache
 
+ENTRYPOINT ["app-entrypoint"]
 CMD ["php-fpm"]
 
 
@@ -65,8 +74,5 @@ FROM nginx:1.27-alpine AS web
 
 WORKDIR /var/www
 
+COPY --from=app /var/www/public ./public
 COPY docker/nginx/default.conf /etc/nginx/conf.d/default.conf
-COPY --from=frontend /build/public ./public
-
-RUN mkdir -p /var/www/storage/app/public \
-    && ln -sfn ../storage/app/public /var/www/public/storage

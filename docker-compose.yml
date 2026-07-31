@@ -1,20 +1,67 @@
-x-app-service: &app-service
-  image: kitsuluh-app:latest
+name: kitsuluh
+
+x-app: &app
   build:
     context: .
     target: app
+  image: kitsuluh-app:latest
+  pull_policy: build
   restart: unless-stopped
   env_file:
     - .env
-  networks:
-    - backend
+  environment:
+    APP_ENV: production
+    APP_DEBUG: "false"
+    APP_URL: https://kitsuluh.krakatau-it.co.id
+    ASSET_URL: https://kitsuluh.krakatau-it.co.id
+    APP_DOMAIN: kitsuluh.krakatau-it.co.id
+    SESSION_DOMAIN: kitsuluh.krakatau-it.co.id
+    SESSION_SECURE_COOKIE: "true"
+    DB_CONNECTION: pgsql
+    DB_HOST: postgres
+    DB_PORT: 5432
+    DB_DATABASE: kitsuluh
+    DB_USERNAME: kitsuluh
+    FFMPEG_PATH: /usr/bin/ffmpeg
+    FFPROBE_PATH: /usr/bin/ffprobe
   volumes:
     - storage-data:/var/www/storage
-    - bootstrap-cache:/var/www/bootstrap/cache
+  networks:
+    - internal
+    - outbound
+  depends_on:
+    postgres:
+      condition: service_healthy
 
 services:
+  init:
+    <<: *app
+    restart: "no"
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        set -eu
+        until pg_isready -h postgres -p 5432 -U kitsuluh -d kitsuluh >/dev/null 2>&1; do
+          echo "Menunggu PostgreSQL..."
+          sleep 2
+        done
+        mkdir -p \
+          storage/app/public \
+          storage/framework/cache \
+          storage/framework/sessions \
+          storage/framework/views \
+          storage/logs \
+          bootstrap/cache
+        chown -R www-data:www-data storage bootstrap/cache
+        php artisan config:clear
+        CACHE_STORE=array SESSION_DRIVER=array php artisan migrate --force
+    depends_on:
+      postgres:
+        condition: service_healthy
+
   app:
-    <<: *app-service
+    <<: *app
+    command: php-fpm
     healthcheck:
       test: ["CMD", "php-fpm", "-t"]
       interval: 30s
@@ -22,73 +69,71 @@ services:
       retries: 3
       start_period: 20s
     depends_on:
-      postgres:
-        condition: service_healthy
+      init:
+        condition: service_completed_successfully
+
+  queue-worker:
+    <<: *app
+    command: php artisan queue:work --sleep=3 --tries=3 --timeout=3600
+    stop_grace_period: 1h
+    depends_on:
+      init:
+        condition: service_completed_successfully
+
+  scheduler:
+    <<: *app
+    command: php artisan schedule:work
+    depends_on:
+      init:
+        condition: service_completed_successfully
 
   nginx:
-    image: kitsuluh-web:latest
     build:
       context: .
       target: web
+    image: kitsuluh-web:latest
+    pull_policy: build
     restart: unless-stopped
-    expose:
-      - "80"
-    networks:
-      - web
-      - backend
     volumes:
       - storage-data:/var/www/storage:ro
+    networks:
+      - internal
+      - web
     depends_on:
       app:
         condition: service_healthy
     labels:
       - traefik.enable=true
       - traefik.docker.network=web
-      - traefik.http.routers.kitsuluh.rule=Host(`kitcrm.krakatau-it.co.id`)
+      - traefik.http.routers.kitsuluh.rule=Host(`kitsuluh.krakatau-it.co.id`)
       - traefik.http.routers.kitsuluh.entrypoints=web
       - traefik.http.services.kitsuluh.loadbalancer.server.port=80
 
-  scheduler:
-    <<: *app-service
-    command: php artisan schedule:work
-    depends_on:
-      postgres:
-        condition: service_healthy
-
-  queue-worker:
-    <<: *app-service
-    command: php artisan queue:work --tries=3 --timeout=3600 --sleep=3
-    stop_grace_period: 1h
-    depends_on:
-      postgres:
-        condition: service_healthy
-
   postgres:
-    image: postgres:15-alpine
+    image: postgres:17-alpine
     restart: unless-stopped
-    environment:
-      POSTGRES_USER: kitsuluh
-      POSTGRES_PASSWORD: password.1
-      POSTGRES_DB: kitsuluh
-    networks:
-      - backend
+    env_file:
+      - .env
     volumes:
       - pgdata:/var/lib/postgresql/data
+    networks:
+      - internal
     healthcheck:
       test: ["CMD", "pg_isready", "-U", "kitsuluh", "-d", "kitsuluh"]
-      interval: 10s
+      interval: 5s
       timeout: 5s
-      retries: 5
+      retries: 12
       start_period: 20s
 
-volumes:
-  pgdata:
-  storage-data:
-  bootstrap-cache:
-
 networks:
+  internal:
+    internal: true
+  outbound:
+    driver: bridge
   web:
     external: true
     name: web
-  backend:
-    driver: bridge
+
+volumes:
+  storage-data:
+  pgdata:
