@@ -25,7 +25,7 @@ x-app: &app
     FFMPEG_PATH: /usr/bin/ffmpeg
     FFPROBE_PATH: /usr/bin/ffprobe
   volumes:
-    - storage-data:/var/www/storage
+    - suluh-storage-data:/var/www/storage
   networks:
     - internal
     - outbound
@@ -112,18 +112,19 @@ services:
   postgres:
     image: postgres:17-alpine
     restart: unless-stopped
-    env_file:
-      - .env
+    environment:
+      POSTGRES_USER: kitsuluh
+      POSTGRES_PASSWORD: password.1
+      POSTGRES_DB: kitsuluh
     volumes:
-      - pgdata:/var/lib/postgresql/data
+      - suluh_postgres_data:/var/lib/postgresql/data
     networks:
       - internal
     healthcheck:
-      test: ["CMD", "pg_isready", "-U", "kitsuluh", "-d", "kitsuluh"]
+      test: ["CMD-SHELL", "pg_isready -U \"$${POSTGRES_USER}\" -d \"$${POSTGRES_DB}\""]
       interval: 5s
       timeout: 5s
       retries: 12
-      start_period: 20s
 
 networks:
   internal:
@@ -135,5 +136,5 @@ networks:
     name: web
 
 volumes:
-  storage-data:
-  pgdata:
+  suluh-storage-data:
+  suluh_postgres_data:
