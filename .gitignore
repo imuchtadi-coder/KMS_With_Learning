@@ -19,6 +19,7 @@
 /storage/pail
 /vendor
 /docs
+/backups
 /tema
 Homestead.json
 Homestead.yaml
