@@ -1,5 +1,6 @@
 <script setup>
-import { ref, computed, onMounted, onBeforeUnmount, watch, nextTick } from 'vue'
+import { ref, computed } from 'vue'
+import VideoPlayer from '@/components/learning/VideoPlayer.vue'
 
 const props = defineProps({
   course: { type: Object, required: true },
@@ -7,8 +8,6 @@ const props = defineProps({
 })
 
 const selectedLesson = ref(null)
-const videoRef = ref(null)
-const hlsInstance = ref(null)
 
 const readyVideo = computed(() => {
   return selectedLesson.value?.videos?.find(v => v.status === 'ready')
@@ -20,52 +19,6 @@ function selectLesson(lesson) {
 
 function backToOverview() {
   selectedLesson.value = null
-}
-
-onMounted(() => {
-  initHls()
-})
-
-watch(readyVideo, () => {
-  if (hlsInstance.value) {
-    hlsInstance.value.destroy()
-    hlsInstance.value = null
-  }
-  if (readyVideo.value) {
-    nextTick(() => initHls())
-  }
-})
-
-onBeforeUnmount(() => {
-  if (hlsInstance.value) {
-    hlsInstance.value.destroy()
-    hlsInstance.value = null
-  }
-})
-
-function initHls() {
-  const video = videoRef.value
-  if (!video) return
-
-  const vid = readyVideo.value
-  if (!vid) return
-
-  const hlsUrl = vid.hls_path
-    ? '/storage/' + vid.hls_path + '/master.m3u8'
-    : null
-
-  if (!hlsUrl) return
-
-  import('hls.js').then(({ default: Hls }) => {
-    if (Hls.isSupported()) {
-      const hls = new Hls()
-      hls.loadSource(hlsUrl)
-      hls.attachMedia(video)
-      hlsInstance.value = hls
-    } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
-      video.src = hlsUrl
-    }
-  })
 }
 
 function formatFileSize(bytes) {
@@ -117,11 +70,9 @@ function isPreviewable(type) {
           <!-- Video Player -->
           <VCard flat border class="mb-6 overflow-hidden">
             <div class="bg-black position-relative" style="aspect-ratio: 16 / 9;">
-              <video
+              <VideoPlayer
                 v-if="readyVideo"
-                ref="videoRef"
-                class="w-100 h-100"
-                controls
+                :video="readyVideo"
               />
               <div v-else class="d-flex flex-column align-center justify-center text-white h-100 pa-4">
                 <VIcon icon="mdi-play-circle-outline" size="64" color="grey-lighten-1" />

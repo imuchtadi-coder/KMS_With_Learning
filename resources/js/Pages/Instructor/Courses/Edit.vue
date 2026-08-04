@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { useForm, router, usePage } from '@inertiajs/vue3'
 
 const page = usePage()
@@ -35,10 +35,14 @@ const currentSectionId = ref(null)
 
 const contentDialog = ref(false)
 const contentLessonId = ref(null)
-const uploadingVideo = ref(false)
 const uploadingMaterial = ref(false)
-const videoFile = ref(null)
-const videoTitle = ref('')
+const showVideoForm = ref(false)
+const videoForm = useForm({
+  source_type: 'hls',
+  title: '',
+  video: null,
+  youtube_url: '',
+})
 const materialFile = ref(null)
 const materialTitle = ref('')
 
@@ -104,31 +108,100 @@ function deleteLesson(lesson) {
 
 function openContentDialog(lesson) {
   contentLessonId.value = lesson.id
-  videoTitle.value = ''
-  videoFile.value = null
+  resetVideoForm()
   materialTitle.value = ''
   materialFile.value = null
   contentDialog.value = true
 }
 
+function resetVideoForm() {
+  videoForm.reset()
+  videoForm.clearErrors()
+  showVideoForm.value = false
+}
+
+function isSupportedYouTubeUrl(value) {
+  try {
+    const url = new URL(value)
+    const hosts = new Set([
+      'youtube.com', 'www.youtube.com', 'm.youtube.com',
+      'youtu.be', 'www.youtu.be',
+      'youtube-nocookie.com', 'www.youtube-nocookie.com',
+    ])
+
+    if (url.protocol !== 'https:' || !hosts.has(url.hostname) || url.username || url.password || url.port)
+      return false
+
+    const segments = url.pathname.split('/').filter(Boolean)
+    let videoId = null
+
+    if (url.hostname === 'youtu.be' || url.hostname === 'www.youtu.be')
+      videoId = segments.length === 1 ? segments[0] : null
+    else if (url.pathname === '/watch')
+      videoId = url.searchParams.get('v')
+    else if (segments.length === 2 && ['shorts', 'embed'].includes(segments[0]))
+      videoId = segments[1]
+
+    return /^[A-Za-z0-9_-]{11}$/.test(videoId || '')
+  } catch {
+    return false
+  }
+}
+
 function uploadVideo() {
-  if (!videoFile.value || !videoTitle.value) return
-  uploadingVideo.value = true
-  const data = new FormData()
-  data.append('title', videoTitle.value)
-  data.append('video', videoFile.value)
-  router.post(route('instructor.videos.store', contentLesson.value.id), data, {
+  videoForm.clearErrors()
+
+  if (videoForm.source_type === 'youtube' && !isSupportedYouTubeUrl(videoForm.youtube_url)) {
+    videoForm.setError('youtube_url', 'Masukkan URL YouTube HTTPS yang valid dan berasal dari domain resmi YouTube.')
+    showVideoForm.value = true
+    return
+  }
+
+  videoForm.post(route('instructor.videos.store', contentLesson.value.id), {
     preserveScroll: true,
-    onSuccess: () => {
-      uploadingVideo.value = false
-      videoFile.value = null
-      videoTitle.value = ''
+    forceFormData: true,
+    onSuccess: page => {
+      const videoErrors = Object.fromEntries(
+        Object.entries(page.props.errors || {}).filter(([field]) =>
+          ['source_type', 'title', 'video', 'youtube_url'].includes(field),
+        ),
+      )
+
+      if (Object.keys(videoErrors).length) {
+        videoForm.setError(videoErrors)
+        showVideoForm.value = true
+        return
+      }
+
+      // A validation redirect is still an Inertia "success" response. Only
+      // close the form after the controller confirms that a video was stored.
+      if (!page.props.flash?.success) {
+        showVideoForm.value = true
+        return
+      }
+
+      resetVideoForm()
     },
-    onError: () => {
-      uploadingVideo.value = false
+    onError: errors => {
+      videoForm.setError(errors)
+      showVideoForm.value = true
     },
   })
 }
+
+watch(() => videoForm.source_type, sourceType => {
+  videoForm.clearErrors('video', 'youtube_url')
+
+  if (sourceType === 'youtube') {
+    videoForm.video = null
+  } else {
+    videoForm.youtube_url = ''
+  }
+})
+
+watch(contentDialog, isOpen => {
+  if (!isOpen) resetVideoForm()
+})
 
 function deleteVideo(video) {
   if (!confirm('Delete this video?')) return
@@ -371,13 +444,19 @@ function formatFileSize(bytes) {
                 <VCard v-for="video in contentLesson.videos" :key="video.id" variant="outlined" class="pa-3">
                   <div class="d-flex align-center ga-3">
                     <VAvatar rounded variant="tonal" color="info" size="40">
-                      <VIcon icon="mdi-filmstrip" size="24" />
+                      <VIcon :icon="video.source_type === 'youtube' ? 'mdi-youtube' : 'mdi-filmstrip'" size="24" />
                     </VAvatar>
                     <div class="flex-grow-1" style="min-width: 0;">
                       <div class="font-weight-medium text-body-2 text-truncate">{{ video.title }}</div>
-                      <VChip :color="video.status === 'ready' ? 'success' : 'warning'" size="x-small" variant="tonal" label>
-                        {{ video.status }}
-                      </VChip>
+                      <div class="d-flex align-center ga-1 mt-1 flex-wrap">
+                        <VChip :color="video.status === 'ready' ? 'success' : 'warning'" size="x-small" variant="tonal" label>
+                          {{ video.status }}
+                        </VChip>
+                        <VChip :color="video.source_type === 'youtube' ? 'error' : 'info'" size="x-small" variant="tonal" label>
+                          <VIcon start :icon="video.source_type === 'youtube' ? 'mdi-youtube' : 'mdi-upload'" size="12" />
+                          {{ video.source_type === 'youtube' ? 'YouTube' : 'Upload' }}
+                        </VChip>
+                      </div>
                     </div>
                     <VBtn variant="text" color="error" size="x-small" icon @click="deleteVideo(video)">
                       <VIcon icon="mdi-delete" size="20" />
@@ -386,26 +465,57 @@ function formatFileSize(bytes) {
                 </VCard>
               </div>
               <div v-else class="text-body-2 text-medium-emphasis mb-3">
-                <VIcon icon="mdi-video-off" size="20" class="me-1" />No videos uploaded yet.
+                <VIcon icon="mdi-video-off" size="20" class="me-1" />Belum ada materi video.
               </div>
               <VExpandTransition>
-                <VForm v-show="!!videoFile || !!videoTitle" @submit.prevent="uploadVideo" class="d-flex flex-column ga-2 pa-3 bg-white rounded">
-                  <VTextField v-model="videoTitle" label="Video Title" variant="outlined" density="compact" hide-details="auto" />
-                  <VFileInput v-model="videoFile" label="Video File" variant="outlined" density="compact"
+                <VForm v-if="showVideoForm" @submit.prevent="uploadVideo" class="d-flex flex-column ga-3 pa-3 bg-white rounded border">
+                  <div>
+                    <div class="text-body-2 font-weight-medium mb-2">Sumber video</div>
+                    <VBtnToggle v-model="videoForm.source_type" color="info" variant="outlined" density="comfortable" mandatory divided class="w-100">
+                      <VBtn value="hls" class="flex-grow-1">
+                        <VIcon start icon="mdi-upload" />Unggah Video
+                      </VBtn>
+                      <VBtn value="youtube" class="flex-grow-1">
+                        <VIcon start icon="mdi-youtube" />Tautan YouTube
+                      </VBtn>
+                    </VBtnToggle>
+                    <div v-if="videoForm.errors.source_type" class="text-error text-caption mt-1">{{ videoForm.errors.source_type }}</div>
+                  </div>
+
+                  <VTextField v-model="videoForm.title" label="Judul Video" variant="outlined" density="compact"
+                    :error-messages="videoForm.errors.title" hide-details="auto"
+                    @update:model-value="videoForm.clearErrors('title')" />
+
+                  <VFileInput v-if="videoForm.source_type === 'hls'" v-model="videoForm.video" label="File Video" variant="outlined" density="compact"
                     accept="video/mp4,video/mov,video/avi,video/mkv,video/webm"
                     prepend-icon="mdi-upload"
-                    hint="MP4, MOV, AVI, MKV, WebM (max 5GB)" persistent-hint
-                    hide-details="auto" />
-                  <div class="d-flex ga-2">
-                    <VBtn type="submit" color="info" variant="elevated" size="small" :loading="uploadingVideo">
-                      <VIcon start icon="mdi-upload" size="16" />Upload Video
+                    hint="MP4, MOV, AVI, MKV, atau WebM; maksimal 2 GB. Video akan diproses menjadi HLS."
+                    persistent-hint :error-messages="videoForm.errors.video" hide-details="auto"
+                    @update:model-value="videoForm.clearErrors('video')" />
+
+                  <div v-else class="d-flex flex-column ga-2">
+                    <VTextField v-model="videoForm.youtube_url" label="URL YouTube" variant="outlined" density="compact"
+                      placeholder="https://www.youtube.com/watch?v=..." prepend-inner-icon="mdi-youtube"
+                      :error-messages="videoForm.errors.youtube_url" hide-details="auto"
+                      @update:model-value="videoForm.clearErrors('youtube_url')" />
+                    <VAlert color="info" variant="tonal" density="compact" icon="mdi-information-outline">
+                      <div class="text-caption">
+                        Gunakan video <strong>public</strong> atau <strong>unlisted</strong> yang mengizinkan pemutaran melalui embed. Video tidak akan diunduh ke server KITsuluh.
+                      </div>
+                    </VAlert>
+                  </div>
+
+                  <div class="d-flex ga-2 flex-wrap">
+                    <VBtn type="button" color="info" variant="elevated" size="small" :loading="videoForm.processing" @click="uploadVideo">
+                      <VIcon start :icon="videoForm.source_type === 'youtube' ? 'mdi-link-plus' : 'mdi-upload'" size="16" />
+                      {{ videoForm.source_type === 'youtube' ? 'Tambahkan Video' : 'Unggah Video' }}
                     </VBtn>
-                    <VBtn variant="text" size="small" @click="videoFile = null; videoTitle = ''">Cancel</VBtn>
+                    <VBtn variant="text" size="small" :disabled="videoForm.processing" @click="resetVideoForm">Batal</VBtn>
                   </div>
                 </VForm>
               </VExpandTransition>
-              <VBtn v-if="!videoFile && !videoTitle" variant="tonal" color="info" size="small" class="mt-2" @click="videoTitle = ' '; videoTitle = ''">
-                <VIcon start icon="mdi-plus" size="16" />Add Video
+              <VBtn v-if="!showVideoForm" variant="tonal" color="info" size="small" class="mt-2" @click="showVideoForm = true">
+                <VIcon start icon="mdi-plus" size="16" />Tambah Video
               </VBtn>
             </div>
 

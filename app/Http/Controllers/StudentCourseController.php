@@ -361,43 +361,4 @@ class StudentCourseController extends Controller
         return redirect()->back()->with('success', 'Lesson marked as complete!');
     }
 
-    /**
-     * Update video watch progress (for video tracking)
-     */
-    public function updateProgress(Request $request)
-    {
-        $validated = $request->validate([
-            'lesson_id' => 'required|exists:lessons,id',
-            'watched_seconds' => 'required|numeric|min:0',
-            'total_seconds' => 'required|numeric|min:0',
-        ]);
-
-        $user = auth()->user();
-        $lesson = Lesson::find($validated['lesson_id']);
-
-        // Check enrollment
-        if (!$lesson->section->course->enrollments()->where('user_id', $user->id)->exists()) {
-            return response()->json(['error' => 'Not enrolled'], 403);
-        }
-
-        // Calculate percentage watched
-        $percentage = $validated['total_seconds'] > 0
-            ? ($validated['watched_seconds'] / $validated['total_seconds']) * 100
-            : 0;
-
-        // Update progress
-        Progress::updateOrCreate(
-            ['user_id' => $user->id, 'lesson_id' => $lesson->id],
-            [
-                'watched_seconds' => $validated['watched_seconds'],
-                'total_seconds' => $validated['total_seconds'],
-                'percentage' => $percentage,
-                // Auto-complete if watched >= 80%
-                'completed' => $percentage >= 80,
-                'completed_at' => $percentage >= 80 ? now() : null
-            ]
-        );
-
-        return response()->json(['success' => true, 'percentage' => $percentage]);
-    }
 }

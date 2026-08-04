@@ -1,6 +1,7 @@
 <script setup>
-import { ref, computed, onMounted, onBeforeUnmount, watch } from 'vue'
+import { ref, computed } from 'vue'
 import { router } from '@inertiajs/vue3'
+import VideoPlayer from '@/components/learning/VideoPlayer.vue'
 
 const props = defineProps({
   course: { type: Object, required: true },
@@ -13,69 +14,58 @@ const props = defineProps({
 })
 
 const completing = ref(false)
-const videoRef = ref(null)
-const hlsInstance = ref(null)
 const sections = computed(() => props.course.sections || [])
 const readyVideo = computed(() => {
   return props.lesson.videos?.find(v => v.status === 'ready')
 })
 
-onMounted(() => {
-  initHls()
-})
-
-onBeforeUnmount(() => {
-  if (hlsInstance.value) {
-    hlsInstance.value.destroy()
-    hlsInstance.value = null
-  }
-})
-
-function initHls() {
-  const video = videoRef.value
-  const readyVid = readyVideo.value
-  if (!video || !readyVid) return
-
-  const hlsUrl = readyVid.hls_path
-    ? '/storage/' + readyVid.hls_path + '/master.m3u8'
-    : null
-
-  if (!hlsUrl) return
-
-  import('hls.js').then(({ default: Hls }) => {
-    if (Hls.isSupported()) {
-      const hls = new Hls()
-      hls.loadSource(hlsUrl)
-      hls.attachMedia(video)
-      hlsInstance.value = hls
-    } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
-      video.src = hlsUrl
-    }
-  })
-}
-
 const progressValue = ref(props.progress?.watched_seconds ?? 0)
 const totalSeconds = ref(props.progress?.total_seconds ?? 0)
+const progressCompleted = ref(props.progress?.completed ?? false)
 let lastUpdateTime = 0
+let progressRequestPending = false
 
-function onTimeUpdate() {
-  const video = videoRef.value
-  if (!video) return
-
-  const current = Math.floor(video.currentTime)
-  const duration = Math.floor(video.duration) || 0
+function onTimeUpdate({ currentTime, duration: playerDuration }) {
+  const current = Math.floor(currentTime)
+  const duration = Math.floor(playerDuration) || 0
   totalSeconds.value = duration
 
-  if (current - lastUpdateTime >= 5) {
+  if (duration > 0 && current - lastUpdateTime >= 5 && !progressRequestPending) {
     lastUpdateTime = current
-    router.post(route('student.lessons.update-progress'), {
-      lesson_id: props.lesson.id,
-      watched_seconds: current,
-      total_seconds: duration,
-    }, {
-      preserveScroll: true,
-      preserveState: true,
+    sendProgress(current, duration)
+  }
+}
+
+async function sendProgress(current, duration) {
+  progressRequestPending = true
+
+  try {
+    const response = await fetch(route('student.lessons.update-progress'), {
+      method: 'POST',
+      credentials: 'same-origin',
+      headers: {
+        Accept: 'application/json',
+        'Content-Type': 'application/json',
+        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || '',
+      },
+      body: JSON.stringify({
+        lesson_id: props.lesson.id,
+        video_id: readyVideo.value?.id,
+        watched_seconds: current,
+        total_seconds: duration,
+      }),
     })
+
+    if (!response.ok) return
+
+    const result = await response.json()
+    progressValue.value = result.progress?.watched_seconds ?? progressValue.value
+    totalSeconds.value = result.progress?.total_seconds ?? totalSeconds.value
+    progressCompleted.value = result.progress?.completed ?? progressCompleted.value
+  } catch {
+    // Pembaruan berikutnya akan mencoba lagi tanpa mengganggu pemutaran video.
+  } finally {
+    progressRequestPending = false
   }
 }
 
@@ -121,11 +111,9 @@ function formatDate(date) {
       <!-- Video Player -->
       <VCard flat border class="mb-6 overflow-hidden">
         <div class="bg-black position-relative" style="aspect-ratio: 16 / 9;">
-          <video
+          <VideoPlayer
             v-if="readyVideo"
-            ref="videoRef"
-            class="w-100 h-100"
-            controls
+            :video="readyVideo"
             @timeupdate="onTimeUpdate"
           />
           <div v-else class="d-flex flex-column align-center justify-center text-white h-100 pa-4">
@@ -159,7 +147,7 @@ function formatDate(date) {
               </p>
             </div>
             <VChip
-              v-if="progress?.completed"
+              v-if="progressCompleted"
               color="success"
               variant="tonal"
               size="small"
@@ -213,7 +201,7 @@ function formatDate(date) {
           </div>
 
           <!-- Mark as Complete -->
-          <div v-if="!progress?.completed" class="mt-4">
+          <div v-if="!progressCompleted" class="mt-4">
             <VBtn
               color="success"
               variant="elevated"

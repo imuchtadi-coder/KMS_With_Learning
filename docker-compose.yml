@@ -112,10 +112,8 @@ services:
   postgres:
     image: postgres:17-alpine
     restart: unless-stopped
-    environment:
-      POSTGRES_USER: kitsuluh
-      POSTGRES_PASSWORD: password.1
-      POSTGRES_DB: kitsuluh
+    env_file:
+      - .env
     volumes:
       - suluh_postgres_data:/var/lib/postgresql/data
     networks:

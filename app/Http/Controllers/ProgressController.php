@@ -5,7 +5,9 @@ namespace App\Http\Controllers;
 use App\Models\Course;
 use App\Models\Lesson;
 use App\Models\Progress;
+use App\Models\Video;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\ValidationException;
 
@@ -14,9 +16,10 @@ class ProgressController extends Controller
     public function update(Request $request)
     {
         $validated = $request->validate([
-            'lesson_id' => 'required|exists:lessons,id',
-            'watched_seconds' => 'required|integer|min:0',
-            'total_seconds' => 'required|integer|min:1',
+            'lesson_id' => ['required', 'integer', 'exists:lessons,id'],
+            'video_id' => ['nullable', 'integer', 'exists:videos,id'],
+            'watched_seconds' => ['required', 'integer', 'min:0', 'max:604800'],
+            'total_seconds' => ['required', 'integer', 'min:1', 'max:604800'],
         ]);
 
         $user = $request->user();
@@ -26,40 +29,60 @@ class ProgressController extends Controller
         Gate::forUser($user)->authorize('view', $course);
         $this->ensureActiveEnrollment($request, $course);
 
-        $serverDuration = (int) $lesson->videos->sum('duration_seconds');
-        $serverDuration = $serverDuration > 0
-            ? $serverDuration
-            : (int) $lesson->duration_minutes * 60;
+        $videoId = $validated['video_id'] ?? null;
+        $video = $videoId
+            ? $lesson->videos->firstWhere('id', $videoId)
+            : $lesson->videos->firstWhere('status', 'ready');
 
-        if ($serverDuration <= 0) {
+        if (! $video) {
             throw ValidationException::withMessages([
-                'total_seconds' => 'The lesson duration is not available.',
+                'video_id' => 'The selected video does not belong to this lesson or is unavailable.',
             ]);
         }
 
-        if ($validated['watched_seconds'] > $serverDuration) {
-            throw ValidationException::withMessages([
-                'watched_seconds' => 'The watched duration may not exceed the lesson duration.',
+        $progress = DB::transaction(function () use ($lesson, $user, $validated, $video): Progress {
+            $lockedVideo = Video::query()->lockForUpdate()->findOrFail($video->id);
+            $reportedDuration = (int) $validated['total_seconds'];
+
+            if ($lockedVideo->isYoutube() && ! $lockedVideo->duration_seconds) {
+                $lockedVideo->update(['duration_seconds' => $reportedDuration]);
+            }
+
+            $serverDuration = (int) $lockedVideo->duration_seconds;
+            if ($serverDuration <= 0) {
+                $serverDuration = (int) $lesson->duration_minutes * 60;
+            }
+            if ($serverDuration <= 0) {
+                $serverDuration = $reportedDuration;
+            }
+
+            $progress = Progress::query()
+                ->where('user_id', $user->id)
+                ->where('lesson_id', $lesson->id)
+                ->lockForUpdate()
+                ->first() ?? new Progress([
+                    'user_id' => $user->id,
+                    'lesson_id' => $lesson->id,
+                ]);
+
+            $watchedSeconds = min(
+                $serverDuration,
+                max((int) $progress->watched_seconds, (int) $validated['watched_seconds'])
+            );
+            $percentage = min(100, ($watchedSeconds / $serverDuration) * 100);
+            $completed = (bool) $progress->completed || $percentage >= 80;
+
+            $progress->fill([
+                'watched_seconds' => $watchedSeconds,
+                'total_seconds' => $serverDuration,
+                'percentage' => $percentage,
+                'completed' => $completed,
+                'completed_at' => $completed ? ($progress->completed_at ?? now()) : null,
             ]);
-        }
+            $progress->save();
 
-        $progress = Progress::firstOrNew([
-            'user_id' => $user->id,
-            'lesson_id' => $lesson->id,
-        ]);
-
-        $watchedSeconds = max((int) $progress->watched_seconds, $validated['watched_seconds']);
-        $percentage = min(100, ($watchedSeconds / $serverDuration) * 100);
-        $completed = $progress->completed || $percentage >= 80;
-
-        $progress->fill([
-            'watched_seconds' => $watchedSeconds,
-            'total_seconds' => $serverDuration,
-            'percentage' => $percentage,
-            'completed' => $completed,
-            'completed_at' => $completed ? ($progress->completed_at ?? now()) : null,
-        ]);
-        $progress->save();
+            return $progress;
+        });
 
         return response()->json([
             'message' => 'Progress updated',

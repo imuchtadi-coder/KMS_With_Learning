@@ -28,8 +28,25 @@ class SecurityHeaders
             $response->headers->set('Strict-Transport-Security', 'max-age=31536000; includeSubDomains; preload');
         }
 
-        // Content Security Policy
-        $response->headers->set('Content-Security-Policy', "default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' https://api.lmskit.com");
+        // Content Security Policy. Keep external origins explicit; do not use
+        // broad scheme or subdomain wildcards for third-party video content.
+        $contentSecurityPolicy = [
+            "default-src 'self'",
+            "base-uri 'self'",
+            "object-src 'none'",
+            "frame-ancestors 'none'",
+            "form-action 'self'",
+            "script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://www.youtube.com https://s.ytimg.com",
+            "style-src 'self' 'unsafe-inline'",
+            "img-src 'self' data: https://ui-avatars.com",
+            "font-src 'self' data:",
+            "connect-src 'self'",
+            "media-src 'self' blob:",
+            "worker-src 'self' blob:",
+            'frame-src https://www.youtube.com https://www.youtube-nocookie.com',
+        ];
+
+        $response->headers->set('Content-Security-Policy', implode('; ', $contentSecurityPolicy));
 
         // Referrer Policy
         $response->headers->set('Referrer-Policy', 'strict-origin-when-cross-origin');

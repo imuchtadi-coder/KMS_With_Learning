@@ -18,7 +18,10 @@ class HandleCors extends Middleware
      */
     public function handle($request, $next)
     {
-        $allowedOrigins = explode(',', config('cors.allowed_origins', ''));
+        $configuredOrigins = config('cors.allowed_origins', []);
+        $allowedOrigins = is_array($configuredOrigins)
+            ? $configuredOrigins
+            : array_map('trim', explode(',', $configuredOrigins));
         $origin = $request->headers->get('Origin');
 
         if (in_array($origin, $allowedOrigins) || in_array('*', $allowedOrigins)) {

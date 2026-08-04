@@ -30,6 +30,7 @@ return Application::configure(basePath: dirname(__DIR__))
 
         $middleware->web(prepend: [
             HandleInertiaRequests::class,
+            SecurityHeaders::class,
         ]);
 
         $middleware->api(prepend: [
@@ -69,6 +70,10 @@ return Application::configure(basePath: dirname(__DIR__))
         // Render JSON responses for API errors
         $exceptions->render(function (Throwable $e, Request $request) {
             if ($request->wantsJson()) {
+                if ($e instanceof \Illuminate\Validation\ValidationException) {
+                    return null;
+                }
+
                 $status = method_exists($e, 'getStatusCode') ? $e->getStatusCode() : 500;
                 $message = $e->getMessage() ?: 'Server Error';
 

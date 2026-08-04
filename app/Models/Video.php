@@ -7,10 +7,22 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Video extends Model
 {
+    public const SOURCE_HLS = 'hls';
+
+    public const SOURCE_YOUTUBE = 'youtube';
+
+    public const SOURCE_TYPES = [
+        self::SOURCE_HLS,
+        self::SOURCE_YOUTUBE,
+    ];
+
     protected $fillable = [
         'lesson_id',
         'tenant_id',
         'title',
+        'source_type',
+        'youtube_video_id',
+        'youtube_url',
         'original_path',
         'hls_path',
         'thumbnail',
@@ -22,6 +34,16 @@ class Video extends Model
     protected $casts = [
         'duration_seconds' => 'integer',
     ];
+
+    public function isHls(): bool
+    {
+        return ($this->source_type ?? self::SOURCE_HLS) === self::SOURCE_HLS;
+    }
+
+    public function isYoutube(): bool
+    {
+        return $this->source_type === self::SOURCE_YOUTUBE;
+    }
 
     public function getHlsUrlAttribute(): ?string
     {

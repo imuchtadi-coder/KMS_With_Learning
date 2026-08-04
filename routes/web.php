@@ -22,6 +22,7 @@ use App\Http\Controllers\LearningPathAnalyticsController;
 use App\Http\Controllers\LearningPathController;
 use App\Http\Controllers\MaterialController;
 use App\Http\Controllers\NotificationController;
+use App\Http\Controllers\ProgressController;
 use App\Http\Controllers\SearchController;
 use App\Http\Controllers\StudentAssignmentController;
 use App\Http\Controllers\StudentCourseController;
@@ -276,7 +277,7 @@ Route::middleware('auth')->group(function () {
         Route::get('/student/enrollments/{enrollment}', [StudentCourseController::class, 'showEnrollment'])->name('student.enrollments.show');
         Route::get('/student/courses/{course}/lessons/{lesson}', [StudentCourseController::class, 'viewLesson'])->name('student.lessons.view');
         Route::post('/student/lessons/{lesson}/complete', [StudentCourseController::class, 'completeLesson'])->name('student.lessons.complete');
-        Route::post('/student/lessons/update-progress', [StudentCourseController::class, 'updateProgress'])->name('student.lessons.update-progress');
+        Route::post('/student/lessons/update-progress', [ProgressController::class, 'update'])->name('student.lessons.update-progress');
 
         // Learning Paths
         Route::get('/student/learning-paths', [StudentLearningPathController::class, 'index'])->name('student.learning-paths.index');

@@ -3,8 +3,8 @@
     "file": "assets/UserProfile-BospVrxj.css",
     "src": "_UserProfile-BospVrxj.css"
   },
-  "_UserProfile-CfV5iVD9.js": {
-    "file": "assets/UserProfile-CfV5iVD9.js",
+  "_UserProfile-CK5co_PL.js": {
+    "file": "assets/UserProfile-CK5co_PL.js",
     "name": "UserProfile",
     "imports": [
       "resources/js/app.js",
@@ -43,13 +43,13 @@
     "src": "node_modules/@mdi/font/fonts/materialdesignicons-webfont.woff2"
   },
   "node_modules/hls.js/dist/hls.mjs": {
-    "file": "assets/hls-D1fSjlvU.js",
+    "file": "assets/hls-PqkoW0Po.js",
     "name": "hls",
     "src": "node_modules/hls.js/dist/hls.mjs",
     "isDynamicEntry": true
   },
   "resources/js/app.js": {
-    "file": "assets/app-Bj0egNUI.js",
+    "file": "assets/app-DPWpANen.js",
     "name": "app",
     "src": "resources/js/app.js",
     "isEntry": true,
@@ -59,12 +59,11 @@
     ],
     "dynamicImports": [
       "node_modules/hls.js/dist/hls.mjs",
-      "node_modules/hls.js/dist/hls.mjs",
       "resources/js/layouts/components/DefaultLayoutWithHorizontalNav.vue",
       "resources/js/layouts/components/DefaultLayoutWithVerticalNav.vue"
     ],
     "css": [
-      "assets/app-B63rxtSK.css"
+      "assets/app-CtqHoqE0.css"
     ],
     "assets": [
       "assets/materialdesignicons-webfont-CSr8KVlo.eot",
@@ -74,25 +73,25 @@
     ]
   },
   "resources/js/layouts/components/DefaultLayoutWithHorizontalNav.vue": {
-    "file": "assets/DefaultLayoutWithHorizontalNav-C6dpqwd1.js",
+    "file": "assets/DefaultLayoutWithHorizontalNav-Dqh-Hblh.js",
     "name": "DefaultLayoutWithHorizontalNav",
     "src": "resources/js/layouts/components/DefaultLayoutWithHorizontalNav.vue",
     "isDynamicEntry": true,
     "imports": [
       "resources/js/app.js",
-      "_UserProfile-CfV5iVD9.js",
+      "_UserProfile-CK5co_PL.js",
       "_vendor-CfBrzgBQ.js",
       "_vuetify-Tv8P5Rv7.js"
     ]
   },
   "resources/js/layouts/components/DefaultLayoutWithVerticalNav.vue": {
-    "file": "assets/DefaultLayoutWithVerticalNav-lq5Q55hW.js",
+    "file": "assets/DefaultLayoutWithVerticalNav-E8PswqCZ.js",
     "name": "DefaultLayoutWithVerticalNav",
     "src": "resources/js/layouts/components/DefaultLayoutWithVerticalNav.vue",
     "isDynamicEntry": true,
     "imports": [
       "resources/js/app.js",
-      "_UserProfile-CfV5iVD9.js",
+      "_UserProfile-CK5co_PL.js",
       "_vendor-CfBrzgBQ.js",
       "_vuetify-Tv8P5Rv7.js"
     ]

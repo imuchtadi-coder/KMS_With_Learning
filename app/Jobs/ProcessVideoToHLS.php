@@ -26,6 +26,15 @@ class ProcessVideoToHLS implements ShouldQueue
 
     public function handle()
     {
+        if (! $this->video->isHls()) {
+            Log::warning('HLS conversion skipped for non-HLS video', [
+                'video_id' => $this->video->id,
+                'source_type' => $this->video->source_type,
+            ]);
+
+            return;
+        }
+
         try {
             // Update status to processing
             $this->video->update(['status' => 'processing']);
