@@ -1,22 +1,17 @@
 <script setup>
 import { useForm } from '@inertiajs/vue3'
 
-defineProps({
+const props = defineProps({
   learningPath: { type: Object, required: true },
 })
 
 const form = useForm({
-  title: '',
-  description: '',
+  title: props.learningPath.title || '',
+  description: props.learningPath.description || '',
 })
 
-const init = (lp) => {
-  form.title = lp.title || ''
-  form.description = lp.description || ''
-}
-
 const submit = () => {
-  form.put(route('admin.learning-paths.update', learningPath.id))
+  form.put(route('admin.learning-paths.update', props.learningPath.id))
 }
 </script>
 
@@ -57,11 +52,3 @@ const submit = () => {
     </VCard>
   </div>
 </template>
-
-<script>
-export default {
-  created() {
-    this.init(this.$props.learningPath)
-  }
-}
-</script>

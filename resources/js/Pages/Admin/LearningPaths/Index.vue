@@ -4,6 +4,12 @@ import { router } from '@inertiajs/vue3'
 defineProps({
   paths: { type: Object, default: () => ({ data: [] }) },
 })
+
+const deletePath = (pathId) => {
+  if (window.confirm('Delete this path?')) {
+    router.delete(route('admin.learning-paths.destroy', pathId))
+  }
+}
 </script>
 
 <template>
@@ -57,7 +63,7 @@ defineProps({
                   size="x-small"
                   color="error"
                   variant="tonal"
-                  @click="window.confirm('Delete this path?') && router.delete(route('admin.learning-paths.destroy', path.id))"
+                  @click="deletePath(path.id)"
                 >
                   <VIcon icon="mdi-delete" size="16" />
                 </VBtn>

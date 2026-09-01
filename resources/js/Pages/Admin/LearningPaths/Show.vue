@@ -1,7 +1,7 @@
 <script setup>
 import { router, useForm } from '@inertiajs/vue3'
 
-defineProps({
+const { learningPath, availableCourses } = defineProps({
   learningPath: { type: Object, required: true },
   availableCourses: { type: Array, default: () => [] },
 })

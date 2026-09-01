@@ -2,13 +2,31 @@
 import { router } from '@inertiajs/vue3'
 
 const props = defineProps({
-  course: { type: Object, required: true },
-  liveClasses: { type: Array, default: () => [] },
+  course: {
+    type: Object,
+    required: true,
+  },
+
+  liveClasses: {
+    type: Object,
+    default: () => ({
+      data: [],
+    }),
+  },
 })
 
 function destroy(lc) {
   if (!confirm('Delete this live class?')) return
-  router.delete(route('instructor.live-classes.destroy', [props.course.id, lc.id]), { preserveScroll: true })
+
+  router.delete(
+    route('instructor.live-classes.destroy', [
+      props.course.id,
+      lc.id,
+    ]),
+    {
+      preserveScroll: true,
+    }
+  )
 }
 </script>
 
@@ -16,36 +34,118 @@ function destroy(lc) {
   <div>
     <div class="d-flex align-center justify-space-between mb-6">
       <div>
-        <h4 class="text-h4 font-weight-bold mb-1">Live Classes</h4>
-        <p class="text-body-1 text-medium-emphasis">{{ course.title }}</p>
+        <h4 class="text-h4 font-weight-bold mb-1">
+          Live Classes
+        </h4>
+
+        <p class="text-body-1 text-medium-emphasis">
+          {{ course.title }}
+        </p>
       </div>
-      <VBtn color="primary" variant="elevated" prepend-icon="mdi-plus" :href="route('instructor.live-classes.create', course.id)">Create Session</VBtn>
+
+      <VBtn
+        color="primary"
+        variant="elevated"
+        prepend-icon="mdi-plus"
+        :href="route('instructor.live-classes.create', course.id)"
+      >
+        Create Session
+      </VBtn>
     </div>
 
     <VRow>
-      <VCol v-for="lc in liveClasses" :key="lc.id" cols="12" md="6" lg="4">
+      <VCol
+        v-for="lc in liveClasses.data"
+        :key="lc.id"
+        cols="12"
+        md="6"
+        lg="4"
+      >
         <VCard flat border hover>
           <VCardText>
             <div class="d-flex align-center justify-space-between mb-2">
-              <VChip :color="{ scheduled: 'info', ongoing: 'success', ended: 'secondary', cancelled: 'error' }[lc.status] || 'secondary'" size="x-small" variant="tonal" label>{{ lc.status }}</VChip>
-              <span class="text-caption text-medium-emphasis">{{ lc.provider?.replace(/_/g, ' ') }}</span>
+              <VChip
+                :color="{
+                  scheduled: 'info',
+                  ongoing: 'success',
+                  ended: 'secondary',
+                  cancelled: 'error',
+                }[lc.status] || 'secondary'"
+                size="x-small"
+                variant="tonal"
+                label
+              >
+                {{ lc.status }}
+              </VChip>
+
+              <span class="text-caption text-medium-emphasis">
+                {{ lc.provider?.replace(/_/g, ' ') }}
+              </span>
             </div>
-            <h6 class="text-h6 font-weight-bold mb-1">{{ lc.title }}</h6>
-            <p class="text-body-2 text-medium-emphasis text-truncate mb-2">{{ lc.description }}</p>
-            <div class="text-caption text-medium-emphasis mb-3">{{ lc.start_time ? new Date(lc.start_time).toLocaleString() : '-' }}</div>
+
+            <h6 class="text-h6 font-weight-bold mb-1">
+              {{ lc.title }}
+            </h6>
+
+            <p class="text-body-2 text-medium-emphasis text-truncate mb-2">
+              {{ lc.description }}
+            </p>
+
+            <div class="text-caption text-medium-emphasis mb-3">
+              {{ lc.start_time
+                ? new Date(lc.start_time).toLocaleString()
+                : '-' }}
+            </div>
+
             <div class="d-flex ga-2">
-              <VBtn variant="tonal" color="primary" size="small" block :href="route('instructor.live-classes.edit', [course.id, lc.id])">Edit</VBtn>
-              <VBtn variant="tonal" color="error" size="small" block @click="destroy(lc)">Delete</VBtn>
-            </div>
+  <VBtn
+    variant="tonal"
+    color="primary"
+    size="small"
+    class="flex-grow-1"
+    :href="route('instructor.live-classes.edit', [course.id, lc.id])"
+  >
+    Edit
+  </VBtn>
+
+  <VBtn
+    variant="tonal"
+    color="error"
+    size="small"
+    class="flex-grow-1"
+    @click="destroy(lc)"
+  >
+    Delete
+  </VBtn>
+</div>
           </VCardText>
         </VCard>
       </VCol>
     </VRow>
 
-    <VCard v-if="!liveClasses.length" flat border class="pa-12 text-center mt-4">
-      <VIcon icon="mdi-video-outline" size="64" color="disabled" />
-      <h5 class="text-h5 mt-4 mb-2">No live classes</h5>
-      <VBtn color="primary" variant="elevated" :href="route('instructor.live-classes.create', course.id)">Create Session</VBtn>
+    <VCard
+      v-if="!liveClasses.data?.length"
+      flat
+      border
+      class="pa-12 text-center mt-4"
+    >
+      <VIcon
+        icon="mdi-video-outline"
+        size="64"
+        color="disabled"
+      />
+
+      <h5 class="text-h5 mt-4 mb-2">
+        No live classes
+      </h5>
+
+      <VBtn
+        color="primary"
+        variant="elevated"
+        :href="route('instructor.live-classes.create', course.id)"
+      >
+        Create Session
+      </VBtn>
     </VCard>
   </div>
 </template>

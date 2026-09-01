@@ -346,44 +346,84 @@ class AdminController extends Controller
      */
     public function mailSettings()
     {
-        return Inertia::render('Admin/Mail/Settings');
-    }
+    $tenant = auth()->user()->tenant;
 
-    /**
-     * Update mail settings
+    return Inertia::render('Admin/Mail/Settings', [
+        'mailSettings' => [
+        'mail_from_address' => $tenant->mail_from_address,
+        'mail_from_name' => $tenant->mail_from_name,
+        'mail_host' => $tenant->mail_host,
+        'mail_port' => $tenant->mail_port,
+        'mail_username' => $tenant->mail_username,
+        'mail_encryption' => $tenant->mail_encryption,
+        // Password sengaja TIDAK dikirim ke frontend
+        ],
+    ]);
+}
+
+ 
+/**
+ * Update mail settings
+ */
+public function updateMailSettings(Request $request)
+{
+    $validated = $request->validate([
+        'mail_from_address' => ['nullable', 'email', 'max:255'],
+        'mail_from_name' => ['nullable', 'string', 'max:255'],
+        'mail_host' => ['nullable', 'string', 'max:255'],
+        'mail_port' => ['nullable', 'integer', 'min:1', 'max:65535'],
+        'mail_username' => ['nullable', 'string', 'max:255'],
+        'mail_password' => ['nullable', 'string', 'max:255'],
+        'mail_encryption' => ['nullable', 'string', 'in:tls,ssl,'],
+    ]);
+
+    // Ambil tenant milik user yang sedang login
+    $tenant = auth()->user()->tenant;
+
+    /*
+     * Ambil data tenant yang sudah ada.
+     * Jangan menimpa data tenant lain yang mungkin sudah tersimpan.
      */
-    public function updateMailSettings(Request $request)
-    {
-        $validated = $request->validate([
-            'mail_from_address' => ['nullable', 'email', 'max:255'],
-            'mail_from_name' => ['nullable', 'string', 'max:255'],
-            'mail_host' => ['nullable', 'string', 'max:255'],
-            'mail_port' => ['nullable', 'integer', 'min:1', 'max:65535'],
-            'mail_username' => ['nullable', 'string', 'max:255'],
-            'mail_password' => ['nullable', 'string', 'max:255'],
-            'mail_encryption' => ['nullable', 'string', 'in:tls,ssl,']
-        ]);
+    $data = $tenant->data ?? [];
 
-        $tenant = auth()->user()->tenant;
+    /*
+     * Simpan Mail Settings ke dalam kolom JSON "data"
+     */
+    $data['mail_from_address'] = $validated['mail_from_address'];
+    $data['mail_from_name'] = $validated['mail_from_name'];
+    $data['mail_host'] = $validated['mail_host'];
+    $data['mail_port'] = $validated['mail_port'];
+    $data['mail_username'] = $validated['mail_username'];
+    $data['mail_encryption'] = $validated['mail_encryption'] ?: null;
 
-        $data = [
-            'mail_from_address' => $validated['mail_from_address'],
-            'mail_from_name' => $validated['mail_from_name'],
-            'mail_host' => $validated['mail_host'],
-            'mail_port' => $validated['mail_port'],
-            'mail_username' => $validated['mail_username'],
-            'mail_encryption' => $validated['mail_encryption'] ?: null,
-        ];
-
-        if (!empty($validated['mail_password'])) {
-            $data['mail_password_encrypted'] = Crypt::encryptString($validated['mail_password']);
-        }
-
-        $tenant->update($data);
-
-        return redirect()->route('admin.mail-settings')
-            ->with('success', 'Mail settings updated successfully.');
+    /*
+     * Password hanya diperbarui jika user mengisi password baru.
+     *
+     * Password disimpan dalam bentuk encrypted,
+     * bukan plain text.
+     */
+    if (!empty($validated['mail_password'])) {
+        $data['mail_password_encrypted'] = Crypt::encryptString(
+            $validated['mail_password']
+        );
     }
+
+    /*
+     * Simpan seluruh data kembali ke kolom "data" tenant.
+     */
+    $tenant->update([
+        'data' => $data,
+    ]);
+
+    /*
+     * Kembali ke halaman Mail Settings
+     * dengan flash message sukses.
+     */
+    return redirect()
+        ->route('admin.mail-settings')
+        ->with('success', 'Mail settings updated successfully.');
+}
+
 
     /**
      * Delete tenant

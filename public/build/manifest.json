@@ -3,8 +3,8 @@
     "file": "assets/UserProfile-BospVrxj.css",
     "src": "_UserProfile-BospVrxj.css"
   },
-  "_UserProfile-CK5co_PL.js": {
-    "file": "assets/UserProfile-CK5co_PL.js",
+  "_UserProfile-u7mGvfAS.js": {
+    "file": "assets/UserProfile-u7mGvfAS.js",
     "name": "UserProfile",
     "imports": [
       "resources/js/app.js",
@@ -49,7 +49,7 @@
     "isDynamicEntry": true
   },
   "resources/js/app.js": {
-    "file": "assets/app-DPWpANen.js",
+    "file": "assets/app-CUIZr7LY.js",
     "name": "app",
     "src": "resources/js/app.js",
     "isEntry": true,
@@ -73,25 +73,25 @@
     ]
   },
   "resources/js/layouts/components/DefaultLayoutWithHorizontalNav.vue": {
-    "file": "assets/DefaultLayoutWithHorizontalNav-Dqh-Hblh.js",
+    "file": "assets/DefaultLayoutWithHorizontalNav-DVbK8GDn.js",
     "name": "DefaultLayoutWithHorizontalNav",
     "src": "resources/js/layouts/components/DefaultLayoutWithHorizontalNav.vue",
     "isDynamicEntry": true,
     "imports": [
       "resources/js/app.js",
-      "_UserProfile-CK5co_PL.js",
+      "_UserProfile-u7mGvfAS.js",
       "_vendor-CfBrzgBQ.js",
       "_vuetify-Tv8P5Rv7.js"
     ]
   },
   "resources/js/layouts/components/DefaultLayoutWithVerticalNav.vue": {
-    "file": "assets/DefaultLayoutWithVerticalNav-E8PswqCZ.js",
+    "file": "assets/DefaultLayoutWithVerticalNav-DIrZDUxr.js",
     "name": "DefaultLayoutWithVerticalNav",
     "src": "resources/js/layouts/components/DefaultLayoutWithVerticalNav.vue",
     "isDynamicEntry": true,
     "imports": [
       "resources/js/app.js",
-      "_UserProfile-CK5co_PL.js",
+      "_UserProfile-u7mGvfAS.js",
       "_vendor-CfBrzgBQ.js",
       "_vuetify-Tv8P5Rv7.js"
     ]

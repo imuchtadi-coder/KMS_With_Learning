@@ -5,6 +5,7 @@ namespace App\Providers;
 use App\Models\Course;
 use App\Models\Section;
 use App\Models\Lesson;
+use App\Models\LearningPath;
 use App\Models\Quiz;
 use App\Models\Assignment;
 use App\Models\Discussion;
@@ -12,6 +13,7 @@ use App\Models\DiscussionReply;
 use App\Policies\CoursePolicy;
 use App\Policies\SectionPolicy;
 use App\Policies\LessonPolicy;
+use App\Policies\LearningPathPolicy;
 use App\Policies\QuizPolicy;
 use App\Policies\AssignmentPolicy;
 use App\Policies\DiscussionPolicy;
@@ -29,6 +31,7 @@ class AuthServiceProvider extends ServiceProvider
         Course::class => CoursePolicy::class,
         Section::class => SectionPolicy::class,
         Lesson::class => LessonPolicy::class,
+        LearningPath::class => LearningPathPolicy::class,
         Quiz::class => QuizPolicy::class,
         Assignment::class => AssignmentPolicy::class,
         Discussion::class => DiscussionPolicy::class,

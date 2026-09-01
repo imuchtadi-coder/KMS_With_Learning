@@ -286,7 +286,7 @@ class LearningPathAnalyticsController extends Controller
      */
     private function getPathCourseMetrics($path)
     {
-        return $path->courses()->orderBy('pivot_order')->get()->map(function ($course) {
+        return $path->courses()->get()->map(function ($course) use ($path) {
             $totalProgress = DB::table('learning_path_progress')
                 ->where('learning_path_id', $path->id)
                 ->where('course_id', $course->id)
