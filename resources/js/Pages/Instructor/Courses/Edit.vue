@@ -25,6 +25,27 @@ const form = useForm({
   thumbnail: null,
 })
 
+function saveCourse() {
+  form
+    .transform(data => ({
+      ...data,
+      _method: 'put',
+    }))
+    .post(route('instructor.courses.update', props.course.id), {
+      preserveScroll: true,
+      forceFormData: true,
+
+      onSuccess: () => {
+        // Reset file input setelah berhasil
+        form.reset('thumbnail')
+      },
+
+      onError: errors => {
+        console.error('Course update error:', errors)
+      },
+    })
+}
+
 const sectionForm = useForm({ title: '' })
 const lessonForm = useForm({ title: '', description: '' })
 const sectionDialog = ref(false)
@@ -267,7 +288,8 @@ function formatFileSize(bytes) {
     <VWindow v-model="tab">
       <VWindowItem value="details">
         <VCard flat border class="pa-8">
-          <VForm @submit.prevent="form.put(route('instructor.courses.update', course.id))" class="d-flex flex-column ga-5">
+          <!-- <VForm @submit.prevent="form.put(route('instructor.courses.update', course.id))" class="d-flex flex-column ga-5"> -->
+          <VForm @submit.prevent="saveCourse" class="d-flex flex-column ga-5">
             <VTextField v-model="form.title" label="Course Title" variant="outlined" density="default" />
             <VTextField v-model="form.slug" label="Course URL Slug" variant="outlined" density="default" />
             <VTextarea v-model="form.description" label="Description" variant="outlined" density="default" rows="5" />
@@ -278,7 +300,7 @@ function formatFileSize(bytes) {
 
             <div class="d-flex flex-column ga-3">
               <div v-if="course.thumbnail" class="position-relative rounded overflow-hidden" style="max-width: 320px; height: 140px;">
-                <img :src="course.thumbnail" class="w-100 h-100" style="object-fit: cover;" />
+                <img :src="course.thumbnail" class="w-100 h-100" style="object-fit: cover;" alt="Current thumbnail"/>
                 <div class="position-absolute text-caption text-white pa-1" style="bottom: 0; left: 0; right: 0; background: rgba(0,0,0,0.5);">
                   Current thumbnail
                 </div>

@@ -131,46 +131,76 @@ class LearningPathController extends Controller
     }
 
     /**
-     * Reorder course in learning path
-     */
-    public function reorderCourse(Request $request, LearningPath $learningPath, Course $course)
-    {
-        $this->authorize('update', $learningPath);
+ * Reorder course in learning path
+ */
+public function reorderCourse(
+    Request $request,
+    LearningPath $learningPath,
+    Course $course
+) {
+    $this->authorize('update', $learningPath);
 
-        $direction = $request->input('direction', 'down');
-        $courseInPath = $learningPath->courses()->where('course_id', $course->id)->first();
+    $direction = $request->input('direction', 'down');
 
-        if (!$courseInPath) {
-            return back()->with('error', 'Course not found in this path!');
-        }
+    // Check whether the course exists in this learning path
+    $courseInPath = $learningPath->courses()
+        ->where('courses.id', $course->id)
+        ->first();
 
-        $currentOrder = $courseInPath->pivot->order;
-        $maxOrder = $learningPath->courses()->max('pivot.order');
-
-        if ($direction === 'up' && $currentOrder > 0) {
-            // Find course with order = currentOrder - 1
-            $swapCourse = $learningPath->courses()
-                ->whereRaw('pivot.order = ?', [$currentOrder - 1])
-                ->first();
-
-            if ($swapCourse) {
-                $learningPath->courses()->updateExistingPivot($swapCourse->id, ['order' => $currentOrder]);
-                $learningPath->courses()->updateExistingPivot($course->id, ['order' => $currentOrder - 1]);
-            }
-        } elseif ($direction === 'down' && $currentOrder < $maxOrder) {
-            // Find course with order = currentOrder + 1
-            $swapCourse = $learningPath->courses()
-                ->whereRaw('pivot.order = ?', [$currentOrder + 1])
-                ->first();
-
-            if ($swapCourse) {
-                $learningPath->courses()->updateExistingPivot($swapCourse->id, ['order' => $currentOrder]);
-                $learningPath->courses()->updateExistingPivot($course->id, ['order' => $currentOrder + 1]);
-            }
-        }
-
-        return back()->with('success', 'Course reordered successfully!');
+    if (!$courseInPath) {
+        return back()->with('error', 'Course not found in this path!');
     }
+
+    // Get current order from pivot table
+    $currentOrder = $courseInPath->pivot->order;
+
+    // Get maximum order from pivot table
+    $maxOrder = $learningPath->courses()
+        ->max('learning_path_courses.order');
+
+    if ($direction === 'up' && $currentOrder > 0) {
+
+        // Find course immediately above
+        $swapCourse = $learningPath->courses()
+            ->wherePivot('order', $currentOrder - 1)
+            ->first();
+
+        if ($swapCourse) {
+            // Swap orders
+            $learningPath->courses()->updateExistingPivot(
+                $swapCourse->id,
+                ['order' => $currentOrder]
+            );
+
+            $learningPath->courses()->updateExistingPivot(
+                $course->id,
+                ['order' => $currentOrder - 1]
+            );
+        }
+
+    } elseif ($direction === 'down' && $currentOrder < $maxOrder) {
+
+        // Find course immediately below
+        $swapCourse = $learningPath->courses()
+            ->wherePivot('order', $currentOrder + 1)
+            ->first();
+
+        if ($swapCourse) {
+            // Swap orders
+            $learningPath->courses()->updateExistingPivot(
+                $swapCourse->id,
+                ['order' => $currentOrder]
+            );
+
+            $learningPath->courses()->updateExistingPivot(
+                $course->id,
+                ['order' => $currentOrder + 1]
+            );
+        }
+    }
+
+    return back()->with('success', 'Course reordered successfully!');
+}
 
     /**
      * Remove course from learning path
