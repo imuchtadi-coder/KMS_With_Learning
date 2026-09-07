@@ -3,7 +3,9 @@ import { router } from '@inertiajs/vue3'
 
 defineProps({
   course: { type: Object, required: true },
-  questions: { type: Array, default: () => [] },
+  // questions: { type: Array, default: () => [] },
+  questions: {type: Object, default: () => ({ data:[],}),
+},
 })
 
 function destroy(question) {
@@ -26,14 +28,15 @@ function destroy(question) {
       </VBtn>
     </div>
 
-    <VCard v-if="questions.length" flat border>
+    <!-- <VCard v-if="questions.length" flat border> -->
+    <VCard v-if="questions.data?.length" flat border>
       <VDataTable
-        :items="questions"
-        :headers="[
-          { title: 'Question', key: 'question_text' },
-          { title: 'Type', key: 'type' },
-          { title: 'Actions', key: 'actions' },
-        ]"
+        :items="questions.data"
+        :headers="[ 
+          { title: 'Question', key: 'question_text', }, 
+          { title: 'Type', key: 'question_type', }, 
+          { title: 'Actions', key: 'actions', sortable: false, }, 
+        ]" 
         disable-sort
         hide-default-footer
         class="text-no-wrap"
@@ -41,7 +44,7 @@ function destroy(question) {
         <template #item.question_text="{ value }">
           <span class="text-truncate d-inline-block" style="max-width: 400px;">{{ value }}</span>
         </template>
-        <template #item.type="{ value }">
+        <template #item.question_type="{ value }">
           <VChip :color="{ multiple_choice: 'primary', true_false: 'success', essay: 'warning' }[value] || 'secondary'" size="x-small" variant="tonal" label>
             {{ value?.replace(/_/g, ' ') }}
           </VChip>

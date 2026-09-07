@@ -31,9 +31,16 @@ const selectedIds = ref([...form.question_ids])
 
 function toggleQuestion(id) {
   const idx = selectedIds.value.indexOf(id)
-  if (idx >= 0) selectedIds.value.splice(idx, 1)
-  else selectedIds.value.push(id)
-  form.question_ids = selectedIds.value
+
+  if (idx >= 0) {
+    selectedIds.value.splice(idx, 1)
+  } else {
+    selectedIds.value.push(id)
+  }
+
+  form.question_ids = [...selectedIds.value]
+
+  console.log('SELECTED QUESTION IDS:', form.question_ids)
 }
 </script>
 
@@ -73,7 +80,7 @@ function toggleQuestion(id) {
           <label class="text-body-2 font-weight-bold d-block mb-2">Select Questions</label>
           <VCard v-if="questions.length" variant="outlined" class="overflow-y-auto" style="max-height: 320px;">
             <VListItem v-for="q in questions" :key="q.id" class="border-t" @click="toggleQuestion(q.id)">
-              <template #prepend><VCheckbox :model-value="selectedIds.includes(q.id)" hide-details density="default" @click.stop /></template>
+              <template #prepend><VCheckbox :model-value="selectedIds.includes(q.id)" hide-details density="default" @click.stop="toggleQuestion(q.id)" /></template>
               <VListItemTitle>{{ q.question_text }}</VListItemTitle>
               <template #append>
                 <div class="d-flex ga-1">

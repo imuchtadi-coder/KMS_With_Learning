@@ -31,8 +31,8 @@ defineProps({
               <span>Pass: {{ quiz.passing_grade }}%</span>
             </div>
             <div class="d-flex ga-2">
-              <VBtn variant="tonal" color="primary" size="small" block :href="route('instructor.quizzes.show', [course.id, quiz.id])">Detail</VBtn>
-              <VBtn variant="outlined" color="secondary" size="small" block :href="route('instructor.quizzes.edit', [course.id, quiz.id])">Edit</VBtn>
+              <VBtn variant="tonal" color="primary" size="small" class="flex-grow-1" style="min-width: 0; width: 0;" block :href="route('instructor.quizzes.show', [course.id, quiz.id])">Detail</VBtn>
+              <VBtn variant="outlined" color="secondary" size="small" class="flex-grow-1" style="min-width: 0; width: 0;" block :href="route('instructor.quizzes.edit', [course.id, quiz.id])">Edit</VBtn>
             </div>
           </VCardText>
         </VCard>

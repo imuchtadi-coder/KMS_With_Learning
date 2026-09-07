@@ -3,7 +3,8 @@ import { router } from '@inertiajs/vue3'
 
 const props = defineProps({
   course: { type: Object, required: true },
-  assignments: { type: Array, default: () => [] },
+  assignments: { type: Object, default: () => ({ data: [],  }), 
+  },
 })
 
 function destroy(assignment) {
@@ -22,10 +23,10 @@ function destroy(assignment) {
       <VBtn color="primary" variant="elevated" prepend-icon="mdi-plus" :href="route('instructor.assignments.create', course.id)">New Assignment</VBtn>
     </div>
 
-    <VCard v-if="assignments.length" flat border>
-      <VDataTable :items="assignments" :headers="[
+    <VCard v-if="assignments.data?.length" flat border>
+      <VDataTable :items="assignments.data" :headers="[
         { title: 'Title', key: 'title' },
-        { title: 'Section', key: 'section?.title' },
+        { title: 'Section', key: 'section.title' },
         { title: 'Max Score', key: 'max_score' },
         { title: 'Deadline', key: 'deadline' },
         { title: 'Submissions', key: 'id' },

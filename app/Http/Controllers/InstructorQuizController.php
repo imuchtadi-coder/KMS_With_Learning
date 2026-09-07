@@ -48,6 +48,11 @@ class InstructorQuizController extends Controller
 
     public function store(Request $request, Course $course)
     {
+        \Log::info('QUIZ STORE HIT', [
+            'course_id' => $course->id,
+            'request' => $request->all(),
+        ]);
+
         $user = auth()->user();
         if (!($user->id === $course->created_by && $user->tenant_id === $course->tenant_id) &&
             !($user->hasRole('tenant_admin') && $user->tenant_id === $course->tenant_id)) {

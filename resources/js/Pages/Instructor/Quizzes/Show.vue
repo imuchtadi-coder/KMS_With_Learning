@@ -1,16 +1,16 @@
 <script setup>
 import { router } from '@inertiajs/vue3'
 
-defineProps({
+const props = defineProps({
   course: { type: Object, required: true },
   quiz: { type: Object, required: true },
 })
 
 function publish() {
-  router.post(route('instructor.quizzes.publish', [quiz.course_id, quiz.id]), {}, { preserveScroll: true })
+  router.post(route('instructor.quizzes.publish', [props.quiz.course_id, props.quiz.id]), {}, { preserveScroll: true })
 }
 function unpublish() {
-  router.post(route('instructor.quizzes.unpublish', [quiz.course_id, quiz.id]), {}, { preserveScroll: true })
+  router.post(route('instructor.quizzes.unpublish', [props.quiz.course_id, props.quiz.id]), {}, { preserveScroll: true })
 }
 </script>
 

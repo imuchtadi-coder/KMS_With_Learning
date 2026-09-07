@@ -38,6 +38,30 @@ function toggleQuestion(id) {
   if (idx >= 0) form.question_ids.splice(idx, 1)
   else form.question_ids.push(id)
 }
+
+function submit() {
+  console.log('CREATE QUIZ: SUBMIT CLICKED')
+  console.log('CREATE QUIZ PAYLOAD:', form.data())
+
+  form.post(
+    route('instructor.quizzes.store', props.course.id),
+    {
+      onStart: () => {
+        console.log('CREATE QUIZ: REQUEST STARTED')
+      },
+      onSuccess: (page) => {
+        console.log('CREATE QUIZ: SUCCESS')
+        console.log('REDIRECT URL:', page.url)
+      },
+      onError: (errors) => {
+        console.error('CREATE QUIZ: VALIDATION ERRORS:', errors)
+      },
+      onFinish: () => {
+        console.log('CREATE QUIZ: REQUEST FINISHED')
+      },
+    }
+  )
+}
 </script>
 
 <template>
@@ -46,7 +70,7 @@ function toggleQuestion(id) {
     <p class="text-body-1 text-medium-emphasis mb-6">{{ course.title }}</p>
 
     <VCard flat border class="pa-8" max-width="720">
-      <VForm @submit.prevent="form.post(route('instructor.quizzes.store', course.id))" class="d-flex flex-column ga-5">
+      <VForm @submit.prevent="submit" class="d-flex flex-column ga-5">
         <VTextField v-model="form.title" label="Quiz Title" variant="outlined" density="default" :rules="[v => !!v || 'Title is required']" hide-details="auto" />
         <VTextarea v-model="form.description" label="Description" variant="outlined" density="default" rows="3" hide-details="auto" />
 
@@ -83,7 +107,7 @@ function toggleQuestion(id) {
           <VCard v-if="questions.length" variant="outlined" class="overflow-y-auto" style="max-height: 320px;">
             <VListItem v-for="q in questions" :key="q.id" class="border-t" @click="toggleQuestion(q.id)">
               <template #prepend>
-                <VCheckbox :model-value="form.question_ids.includes(q.id)" hide-details density="default" @click.stop />
+                <VCheckbox :model-value="form.question_ids.includes(q.id)" hide-details density="default" @click.stop ="toggleQuestion(q.id)" />
               </template>
               <VListItemTitle>{{ q.question_text }}</VListItemTitle>
               <template #append>
