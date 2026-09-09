@@ -26,8 +26,9 @@ class DiscussionReplyController extends Controller
             ->with('success', 'Reply posted.');
     }
 
-    public function update(Request $request, DiscussionReply $reply)
+    public function update(Request $request, Discussion $discussion, DiscussionReply $reply)
     {
+        abort_unless($reply->discussion_id === $discussion->id, 404);
         $this->authorize('update', $reply);
 
         $validated = $request->validate([
@@ -40,8 +41,9 @@ class DiscussionReplyController extends Controller
             ->with('success', 'Reply updated.');
     }
 
-    public function destroy(DiscussionReply $reply)
+    public function destroy(Discussion $discussion, DiscussionReply $reply)
     {
+        abort_unless($reply->discussion_id === $discussion->id, 404);
         $this->authorize('delete', $reply);
 
         $discussionId = $reply->discussion_id;

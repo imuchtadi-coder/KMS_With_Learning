@@ -3,6 +3,8 @@
 namespace Tests\Feature;
 
 use App\Models\Course;
+use App\Models\Discussion;
+use App\Models\DiscussionReply;
 use App\Models\GradebookItem;
 use App\Models\LearningPath;
 use App\Models\Question;
@@ -11,6 +13,7 @@ use App\Models\Tenant;
 use App\Models\User;
 use Database\Seeders\RoleAndPermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Inertia\Testing\AssertableInertia as Assert;
 use Tests\TestCase;
 
 class TenantScopeRegressionTest extends TestCase
@@ -132,6 +135,63 @@ class TenantScopeRegressionTest extends TestCase
 
         $this->assertDatabaseCount('assignments', 0);
         $this->assertDatabaseCount('quizzes', 0);
+    }
+
+    public function test_discussions_are_isolated_between_tenants(): void
+    {
+        [$student] = $this->tenantContext('tenant-a', 'student');
+        [$foreignInstructor, $foreignCourse] = $this->tenantContext('tenant-b', 'instructor');
+        $discussion = Discussion::create([
+            'course_id' => $foreignCourse->id,
+            'title' => 'Foreign discussion',
+            'content' => 'Private tenant B content',
+            'created_by' => $foreignInstructor->id,
+        ]);
+
+        $this->actingAs($student)
+            ->get(route('discussions.index'))
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('Discussions/Index')
+                ->where('discussions.total', 0));
+
+        $this->actingAs($student)->getJson(route('discussions.show', $discussion))->assertForbidden();
+        $this->actingAs($student)->postJson(route('discussions.store'), [
+            'course_id' => $foreignCourse->id,
+            'title' => 'Cross tenant discussion',
+            'content' => 'Should not be created',
+        ])->assertNotFound();
+        $this->actingAs($student)->postJson(route('discussions.replies.store', $discussion), [
+            'content' => 'Cross tenant reply',
+        ])->assertForbidden();
+
+        $this->assertDatabaseCount('discussions', 1);
+        $this->assertDatabaseCount('discussion_replies', 0);
+    }
+
+    public function test_tenant_admin_cannot_moderate_another_tenants_discussion(): void
+    {
+        [$admin] = $this->tenantContext('tenant-a', 'tenant_admin');
+        [$foreignInstructor, $foreignCourse] = $this->tenantContext('tenant-b', 'instructor');
+        $discussion = Discussion::create([
+            'course_id' => $foreignCourse->id,
+            'title' => 'Foreign discussion',
+            'content' => 'Private tenant B content',
+            'created_by' => $foreignInstructor->id,
+        ]);
+        $reply = DiscussionReply::create([
+            'discussion_id' => $discussion->id,
+            'content' => 'Foreign reply',
+            'created_by' => $foreignInstructor->id,
+        ]);
+
+        $this->actingAs($admin)->postJson(route('discussions.pin', $discussion))->assertForbidden();
+        $this->actingAs($admin)->deleteJson(route('discussions.destroy', $discussion))->assertForbidden();
+        $this->actingAs($admin)->deleteJson(
+            route('discussions.replies.destroy', [$discussion, $reply])
+        )->assertForbidden();
+
+        $this->assertDatabaseHas('discussions', ['id' => $discussion->id, 'deleted_at' => null]);
+        $this->assertDatabaseHas('discussion_replies', ['id' => $reply->id, 'deleted_at' => null]);
     }
 
     private function tenantContext(string $tenantId, string $role): array

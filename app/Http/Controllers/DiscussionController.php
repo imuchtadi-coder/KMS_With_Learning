@@ -12,7 +12,9 @@ class DiscussionController extends Controller
 {
     public function index(Request $request)
     {
+        $tenantId = $request->user()->tenant_id;
         $query = Discussion::with(['creator', 'course', 'latestReply.creator'])
+            ->whereHas('course', fn ($query) => $query->where('tenant_id', $tenantId))
             ->withCount('replies');
 
         if ($request->filled('course_id')) {
@@ -25,7 +27,7 @@ class DiscussionController extends Controller
 
         $course = null;
         if ($request->filled('course_id')) {
-            $course = Course::find($request->course_id);
+            $course = Course::where('tenant_id', $tenantId)->find($request->course_id);
         }
 
         return Inertia::render('Discussions/Index', [
@@ -36,14 +38,23 @@ class DiscussionController extends Controller
 
     public function create(Request $request)
     {
+        $this->authorize('create', Discussion::class);
+
         $course = null;
         if ($request->filled('course_id')) {
-            $course = Course::findOrFail($request->course_id);
+            $course = Course::where('tenant_id', $request->user()->tenant_id)
+                ->findOrFail($request->course_id);
         }
 
         $lesson = null;
         if ($request->filled('lesson_id')) {
-            $lesson = Lesson::find($request->lesson_id);
+            $lesson = Lesson::whereHas('section.course', fn ($query) => $query
+                ->where('tenant_id', $request->user()->tenant_id))
+                ->findOrFail($request->lesson_id);
+
+            if ($course && $lesson->section->course_id !== $course->id) {
+                abort(404);
+            }
         }
 
         return Inertia::render('Discussions/Create', [
@@ -54,12 +65,22 @@ class DiscussionController extends Controller
 
     public function store(Request $request)
     {
+        $this->authorize('create', Discussion::class);
+
         $validated = $request->validate([
-            'course_id' => ['required', 'exists:courses,id'],
+            'course_id' => ['required', 'integer'],
             'title' => ['required', 'string', 'max:255'],
             'content' => ['required', 'string'],
-            'lesson_id' => ['nullable', 'exists:lessons,id'],
+            'lesson_id' => ['nullable', 'integer'],
         ]);
+
+        $course = Course::where('tenant_id', $request->user()->tenant_id)
+            ->findOrFail($validated['course_id']);
+
+        if (isset($validated['lesson_id'])) {
+            Lesson::whereHas('section', fn ($query) => $query->where('course_id', $course->id))
+                ->findOrFail($validated['lesson_id']);
+        }
 
         $discussion = Discussion::create([
             'course_id' => $validated['course_id'],
@@ -75,6 +96,7 @@ class DiscussionController extends Controller
 
     public function show(Discussion $discussion)
     {
+        $this->authorize('view', $discussion);
         $discussion->load(['creator', 'course', 'replies.creator']);
         $course = $discussion->course;
 
@@ -123,9 +145,9 @@ class DiscussionController extends Controller
 
     public function pin(Discussion $discussion)
     {
-        $this->authorize('pin', Discussion::class);
+        $this->authorize('pin', $discussion);
 
-        $discussion->update(['is_pinned' => !$discussion->is_pinned]);
+        $discussion->update(['is_pinned' => ! $discussion->is_pinned]);
 
         return redirect()->back()->with('success', $discussion->is_pinned ? 'Discussion pinned.' : 'Discussion unpinned.');
     }
@@ -133,6 +155,8 @@ class DiscussionController extends Controller
     public function lessonDiscussions(Lesson $lesson)
     {
         $course = $lesson->section->course;
+        abort_unless($course->tenant_id === auth()->user()->tenant_id, 404);
+
         $discussions = Discussion::where('course_id', $course->id)
             ->where('lesson_id', $lesson->id)
             ->with(['creator', 'replies', 'latestReply.creator'])

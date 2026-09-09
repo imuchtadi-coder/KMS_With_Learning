@@ -2,8 +2,8 @@
 
 namespace App\Policies;
 
-use App\Models\User;
 use App\Models\DiscussionReply;
+use App\Models\User;
 
 class DiscussionReplyPolicy
 {
@@ -24,11 +24,13 @@ class DiscussionReplyPolicy
 
     public function update(User $user, DiscussionReply $reply): bool
     {
-        return $user->id === $reply->created_by;
+        return $user->tenant_id === $reply->discussion->course->tenant_id
+            && $user->id === $reply->created_by;
     }
 
     public function delete(User $user, DiscussionReply $reply): bool
     {
-        return $user->id === $reply->created_by || $user->hasRole('tenant_admin');
+        return $user->tenant_id === $reply->discussion->course->tenant_id
+            && ($user->id === $reply->created_by || $user->hasRole('tenant_admin'));
     }
 }
