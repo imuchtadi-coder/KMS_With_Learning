@@ -9,6 +9,7 @@ use App\Models\GradebookItem;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Response;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 
 class InstructorGradebookController extends Controller
@@ -16,8 +17,8 @@ class InstructorGradebookController extends Controller
     public function index(Course $course)
     {
         $user = auth()->user();
-        if (!($user->id === $course->created_by && $user->tenant_id === $course->tenant_id) &&
-            !($user->hasRole('tenant_admin') && $user->tenant_id === $course->tenant_id)) {
+        if (! ($user->id === $course->created_by && $user->tenant_id === $course->tenant_id) &&
+            ! ($user->hasRole('tenant_admin') && $user->tenant_id === $course->tenant_id)) {
             abort(403);
         }
 
@@ -65,8 +66,8 @@ class InstructorGradebookController extends Controller
     public function exportCsv(Course $course)
     {
         $user = auth()->user();
-        if (!($user->id === $course->created_by && $user->tenant_id === $course->tenant_id) &&
-            !($user->hasRole('tenant_admin') && $user->tenant_id === $course->tenant_id)) {
+        if (! ($user->id === $course->created_by && $user->tenant_id === $course->tenant_id) &&
+            ! ($user->hasRole('tenant_admin') && $user->tenant_id === $course->tenant_id)) {
             abort(403);
         }
 
@@ -79,9 +80,9 @@ class InstructorGradebookController extends Controller
             // Header row
             $headers = ['Student', 'Email'];
             foreach ($gradebookItems as $item) {
-                $headers[] = $item->title . ' (Score)';
-                $headers[] = $item->title . ' (%)';
-                $headers[] = $item->title . ' (Grade)';
+                $headers[] = $item->title.' (Score)';
+                $headers[] = $item->title.' (%)';
+                $headers[] = $item->title.' (Grade)';
             }
             $headers[] = 'Final (%)';
             $headers[] = 'Final Grade';
@@ -111,32 +112,39 @@ class InstructorGradebookController extends Controller
 
                 $finalPct = $totalWeight > 0 ? round($totalPercentage / $totalWeight, 2) : '';
                 $row[] = $finalPct;
-                $row[] = $finalPct !== '' ? $this->calculateLetterGrade((float)$finalPct) : '';
+                $row[] = $finalPct !== '' ? $this->calculateLetterGrade((float) $finalPct) : '';
                 fputcsv($handle, $row);
             }
 
             fclose($handle);
         };
 
-        $filename = 'gradebook-' . Str::slug($course->title) . '-' . now()->format('Y-m-d') . '.csv';
+        $filename = 'gradebook-'.Str::slug($course->title).'-'.now()->format('Y-m-d').'.csv';
 
         return Response::stream($callback, 200, [
             'Content-Type' => 'text/csv',
-            'Content-Disposition' => 'attachment; filename="' . $filename . '"',
+            'Content-Disposition' => 'attachment; filename="'.$filename.'"',
         ]);
     }
 
     public function updateGrade(Request $request, Course $course)
     {
         $user = auth()->user();
-        if (!($user->id === $course->created_by && $user->tenant_id === $course->tenant_id) &&
-            !($user->hasRole('tenant_admin') && $user->tenant_id === $course->tenant_id)) {
+        if (! ($user->id === $course->created_by && $user->tenant_id === $course->tenant_id) &&
+            ! ($user->hasRole('tenant_admin') && $user->tenant_id === $course->tenant_id)) {
             abort(403);
         }
 
         $validated = $request->validate([
-            'user_id' => 'required|exists:users,id',
-            'gradebook_item_id' => 'required|exists:gradebook_items,id',
+            'user_id' => [
+                'required',
+                Rule::exists('enrollments', 'user_id')->where('course_id', $course->id),
+                Rule::exists('users', 'id')->where('tenant_id', $course->tenant_id),
+            ],
+            'gradebook_item_id' => [
+                'required',
+                Rule::exists('gradebook_items', 'id')->where('course_id', $course->id),
+            ],
             'score' => 'nullable|numeric|min:0',
         ]);
 

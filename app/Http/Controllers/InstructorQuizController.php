@@ -3,15 +3,16 @@
 namespace App\Http\Controllers;
 
 use App\Models\Course;
-use App\Models\Quiz;
-use App\Models\Question;
-use App\Models\GradebookItem;
 use App\Models\Grade;
-use App\Models\QuizAttempt;
+use App\Models\GradebookItem;
+use App\Models\Question;
+use App\Models\Quiz;
 use App\Models\QuizAnswer;
+use App\Models\QuizAttempt;
 use App\Notifications\QuizGraded;
 use App\Services\GamificationService;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 
 class InstructorQuizController extends Controller
@@ -19,8 +20,8 @@ class InstructorQuizController extends Controller
     public function index(Course $course)
     {
         $user = auth()->user();
-        if (!($user->id === $course->created_by && $user->tenant_id === $course->tenant_id) &&
-            !($user->hasRole('tenant_admin') && $user->tenant_id === $course->tenant_id)) {
+        if (! ($user->id === $course->created_by && $user->tenant_id === $course->tenant_id) &&
+            ! ($user->hasRole('tenant_admin') && $user->tenant_id === $course->tenant_id)) {
             abort(403);
         }
 
@@ -35,8 +36,8 @@ class InstructorQuizController extends Controller
     public function create(Course $course)
     {
         $user = auth()->user();
-        if (!($user->id === $course->created_by && $user->tenant_id === $course->tenant_id) &&
-            !($user->hasRole('tenant_admin') && $user->tenant_id === $course->tenant_id)) {
+        if (! ($user->id === $course->created_by && $user->tenant_id === $course->tenant_id) &&
+            ! ($user->hasRole('tenant_admin') && $user->tenant_id === $course->tenant_id)) {
             abort(403);
         }
 
@@ -54,22 +55,22 @@ class InstructorQuizController extends Controller
         ]);
 
         $user = auth()->user();
-        if (!($user->id === $course->created_by && $user->tenant_id === $course->tenant_id) &&
-            !($user->hasRole('tenant_admin') && $user->tenant_id === $course->tenant_id)) {
+        if (! ($user->id === $course->created_by && $user->tenant_id === $course->tenant_id) &&
+            ! ($user->hasRole('tenant_admin') && $user->tenant_id === $course->tenant_id)) {
             abort(403);
         }
 
         $validated = $request->validate([
             'title' => ['required', 'string', 'max:255'],
             'description' => ['nullable', 'string'],
-            'section_id' => ['required', 'exists:sections,id'],
+            'section_id' => ['required', Rule::exists('sections', 'id')->where('course_id', $course->id)],
             'passing_grade' => ['required', 'integer', 'min:0', 'max:100'],
             'time_limit' => ['nullable', 'integer', 'min:1'],
             'max_attempts' => ['required', 'integer', 'min:1', 'max:10'],
             'shuffle_questions' => ['boolean'],
             'show_result' => ['boolean'],
             'question_ids' => ['required', 'array', 'min:1'],
-            'question_ids.*' => ['exists:questions,id'],
+            'question_ids.*' => [Rule::exists('questions', 'id')->where('course_id', $course->id)],
             'is_exam' => ['boolean'],
             'start_date' => ['nullable', 'date', 'required_if:is_exam,1'],
             'end_date' => ['nullable', 'date', 'after_or_equal:start_date', 'required_if:is_exam,1'],
@@ -122,12 +123,14 @@ class InstructorQuizController extends Controller
     public function show(Course $course, Quiz $quiz)
     {
         $user = auth()->user();
-        if (!($user->id === $course->created_by && $user->tenant_id === $course->tenant_id) &&
-            !($user->hasRole('tenant_admin') && $user->tenant_id === $course->tenant_id)) {
+        if (! ($user->id === $course->created_by && $user->tenant_id === $course->tenant_id) &&
+            ! ($user->hasRole('tenant_admin') && $user->tenant_id === $course->tenant_id)) {
             abort(403);
         }
 
-        if ($quiz->course_id !== $course->id) abort(404);
+        if ($quiz->course_id !== $course->id) {
+            abort(404);
+        }
 
         $quiz->load(['questions', 'section', 'attempts.user']);
 
@@ -137,12 +140,14 @@ class InstructorQuizController extends Controller
     public function edit(Course $course, Quiz $quiz)
     {
         $user = auth()->user();
-        if (!($user->id === $course->created_by && $user->tenant_id === $course->tenant_id) &&
-            !($user->hasRole('tenant_admin') && $user->tenant_id === $course->tenant_id)) {
+        if (! ($user->id === $course->created_by && $user->tenant_id === $course->tenant_id) &&
+            ! ($user->hasRole('tenant_admin') && $user->tenant_id === $course->tenant_id)) {
             abort(403);
         }
 
-        if ($quiz->course_id !== $course->id) abort(404);
+        if ($quiz->course_id !== $course->id) {
+            abort(404);
+        }
 
         $course->load('sections');
         $quiz->load('questions');
@@ -154,24 +159,26 @@ class InstructorQuizController extends Controller
     public function update(Request $request, Course $course, Quiz $quiz)
     {
         $user = auth()->user();
-        if (!($user->id === $course->created_by && $user->tenant_id === $course->tenant_id) &&
-            !($user->hasRole('tenant_admin') && $user->tenant_id === $course->tenant_id)) {
+        if (! ($user->id === $course->created_by && $user->tenant_id === $course->tenant_id) &&
+            ! ($user->hasRole('tenant_admin') && $user->tenant_id === $course->tenant_id)) {
             abort(403);
         }
 
-        if ($quiz->course_id !== $course->id) abort(404);
+        if ($quiz->course_id !== $course->id) {
+            abort(404);
+        }
 
         $validated = $request->validate([
             'title' => ['required', 'string', 'max:255'],
             'description' => ['nullable', 'string'],
-            'section_id' => ['required', 'exists:sections,id'],
+            'section_id' => ['required', Rule::exists('sections', 'id')->where('course_id', $course->id)],
             'passing_grade' => ['required', 'integer', 'min:0', 'max:100'],
             'time_limit' => ['nullable', 'integer', 'min:1'],
             'max_attempts' => ['required', 'integer', 'min:1', 'max:10'],
             'shuffle_questions' => ['boolean'],
             'show_result' => ['boolean'],
             'question_ids' => ['required', 'array', 'min:1'],
-            'question_ids.*' => ['exists:questions,id'],
+            'question_ids.*' => [Rule::exists('questions', 'id')->where('course_id', $course->id)],
             'is_exam' => ['boolean'],
             'start_date' => ['nullable', 'date', 'required_if:is_exam,1'],
             'end_date' => ['nullable', 'date', 'after_or_equal:start_date', 'required_if:is_exam,1'],
@@ -219,12 +226,14 @@ class InstructorQuizController extends Controller
     public function destroy(Course $course, Quiz $quiz)
     {
         $user = auth()->user();
-        if (!($user->id === $course->created_by && $user->tenant_id === $course->tenant_id) &&
-            !($user->hasRole('tenant_admin') && $user->tenant_id === $course->tenant_id)) {
+        if (! ($user->id === $course->created_by && $user->tenant_id === $course->tenant_id) &&
+            ! ($user->hasRole('tenant_admin') && $user->tenant_id === $course->tenant_id)) {
             abort(403);
         }
 
-        if ($quiz->course_id !== $course->id) abort(404);
+        if ($quiz->course_id !== $course->id) {
+            abort(404);
+        }
 
         GradebookItem::where('course_id', $course->id)
             ->where('type', 'quiz')
@@ -240,11 +249,13 @@ class InstructorQuizController extends Controller
     public function publish(Course $course, Quiz $quiz)
     {
         $user = auth()->user();
-        if (!($user->hasRole('tenant_admin') && $user->tenant_id === $course->tenant_id)) {
+        if (! ($user->hasRole('tenant_admin') && $user->tenant_id === $course->tenant_id)) {
             abort(403);
         }
 
-        if ($quiz->course_id !== $course->id) abort(404);
+        if ($quiz->course_id !== $course->id) {
+            abort(404);
+        }
 
         $quiz->update(['published' => true]);
 
@@ -255,17 +266,19 @@ class InstructorQuizController extends Controller
     public function essayReview(Course $course, Quiz $quiz, QuizAttempt $attempt)
     {
         $user = auth()->user();
-        if (!($user->id === $course->created_by && $user->tenant_id === $course->tenant_id) &&
-            !($user->hasRole('tenant_admin') && $user->tenant_id === $course->tenant_id)) {
+        if (! ($user->id === $course->created_by && $user->tenant_id === $course->tenant_id) &&
+            ! ($user->hasRole('tenant_admin') && $user->tenant_id === $course->tenant_id)) {
             abort(403);
         }
 
-        if ($quiz->course_id !== $course->id || $attempt->quiz_id !== $quiz->id) abort(404);
+        if ($quiz->course_id !== $course->id || $attempt->quiz_id !== $quiz->id) {
+            abort(404);
+        }
 
         $attempt->load(['quiz.questions', 'answers.question']);
 
-        $essayAnswers = $attempt->answers->filter(fn($a) => $a->question->question_type === 'essay');
-        $autoGraded = $attempt->answers->filter(fn($a) => $a->question->question_type !== 'essay');
+        $essayAnswers = $attempt->answers->filter(fn ($a) => $a->question->question_type === 'essay');
+        $autoGraded = $attempt->answers->filter(fn ($a) => $a->question->question_type !== 'essay');
 
         return Inertia::render('Instructor/Quizzes/EssayReview', compact('course', 'quiz', 'attempt', 'essayAnswers', 'autoGraded'));
     }
@@ -273,12 +286,14 @@ class InstructorQuizController extends Controller
     public function gradeEssay(Request $request, Course $course, Quiz $quiz, QuizAttempt $attempt)
     {
         $user = auth()->user();
-        if (!($user->id === $course->created_by && $user->tenant_id === $course->tenant_id) &&
-            !($user->hasRole('tenant_admin') && $user->tenant_id === $course->tenant_id)) {
+        if (! ($user->id === $course->created_by && $user->tenant_id === $course->tenant_id) &&
+            ! ($user->hasRole('tenant_admin') && $user->tenant_id === $course->tenant_id)) {
             abort(403);
         }
 
-        if ($quiz->course_id !== $course->id || $attempt->quiz_id !== $quiz->id) abort(404);
+        if ($quiz->course_id !== $course->id || $attempt->quiz_id !== $quiz->id) {
+            abort(404);
+        }
 
         $validated = $request->validate([
             'answers' => ['required', 'array'],
@@ -290,7 +305,9 @@ class InstructorQuizController extends Controller
         $totalPoints = 0;
         foreach ($validated['answers'] as $data) {
             $answer = QuizAnswer::findOrFail($data['id']);
-            if ($answer->quiz_attempt_id !== $attempt->id) continue;
+            if ($answer->quiz_attempt_id !== $attempt->id) {
+                continue;
+            }
 
             $answer->update([
                 'points_earned' => $data['points_earned'],
@@ -303,7 +320,7 @@ class InstructorQuizController extends Controller
         // Recalculate total score
         $allAnswers = $attempt->answers()->with('question')->get();
         $earnedPoints = $allAnswers->sum('points_earned');
-        $totalPossible = $allAnswers->sum(fn($a) => $a->question->pivot?->points ?? $a->question->points);
+        $totalPossible = $allAnswers->sum(fn ($a) => $a->question->pivot?->points ?? $a->question->points);
         $score = $totalPossible > 0 ? round(($earnedPoints / $totalPossible) * 100, 2) : 0;
 
         $attempt->update([
@@ -344,11 +361,13 @@ class InstructorQuizController extends Controller
     public function unpublish(Course $course, Quiz $quiz)
     {
         $user = auth()->user();
-        if (!($user->hasRole('tenant_admin') && $user->tenant_id === $course->tenant_id)) {
+        if (! ($user->hasRole('tenant_admin') && $user->tenant_id === $course->tenant_id)) {
             abort(403);
         }
 
-        if ($quiz->course_id !== $course->id) abort(404);
+        if ($quiz->course_id !== $course->id) {
+            abort(404);
+        }
 
         $quiz->update(['published' => false]);
 

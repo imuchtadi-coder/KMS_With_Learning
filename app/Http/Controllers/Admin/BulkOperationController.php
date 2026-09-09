@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Http\Controllers\CertificateController;
 use App\Http\Controllers\Controller;
 use App\Models\Certificate;
 use App\Models\Course;
@@ -9,20 +10,21 @@ use App\Models\Enrollment;
 use App\Models\User;
 use App\Notifications\EnrollmentConfirmation;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 
 class BulkOperationController extends Controller
 {
     public function enrolledStudents(Request $request)
     {
-        $course = Course::findOrFail($request->course_id);
+        $course = Course::where('tenant_id', auth()->user()->tenant_id)
+            ->findOrFail($request->course_id);
         $userIds = Enrollment::where('course_id', $course->id)->pluck('user_id');
         $users = User::whereIn('id', $userIds)->get(['id', 'name', 'email']);
 
         return response()->json($users);
     }
+
     public function importUsersForm()
     {
         return Inertia::render('Admin/Bulk/ImportUsers');
@@ -96,12 +98,13 @@ class BulkOperationController extends Controller
     public function bulkEnroll(Request $request)
     {
         $validated = $request->validate([
-            'course_id' => ['required', 'exists:courses,id'],
+            'course_id' => ['required', Rule::exists('courses', 'id')->where('tenant_id', auth()->user()->tenant_id)],
             'user_ids' => ['required', 'array'],
-            'user_ids.*' => ['exists:users,id'],
+            'user_ids.*' => [Rule::exists('users', 'id')->where('tenant_id', auth()->user()->tenant_id)],
         ]);
 
-        $course = Course::findOrFail($validated['course_id']);
+        $course = Course::where('tenant_id', auth()->user()->tenant_id)
+            ->findOrFail($validated['course_id']);
         $enrolled = 0;
 
         foreach ($validated['user_ids'] as $userId) {
@@ -109,7 +112,7 @@ class BulkOperationController extends Controller
                 ->where('course_id', $course->id)
                 ->exists();
 
-            if (!$exists) {
+            if (! $exists) {
                 $enrollment = Enrollment::create([
                     'user_id' => $userId,
                     'course_id' => $course->id,
@@ -138,12 +141,13 @@ class BulkOperationController extends Controller
     public function bulkCertificates(Request $request)
     {
         $validated = $request->validate([
-            'course_id' => ['required', 'exists:courses,id'],
+            'course_id' => ['required', Rule::exists('courses', 'id')->where('tenant_id', auth()->user()->tenant_id)],
             'user_ids' => ['required', 'array'],
-            'user_ids.*' => ['exists:users,id'],
+            'user_ids.*' => [Rule::exists('users', 'id')->where('tenant_id', auth()->user()->tenant_id)],
         ]);
 
-        $course = Course::findOrFail($validated['course_id']);
+        $course = Course::where('tenant_id', auth()->user()->tenant_id)
+            ->findOrFail($validated['course_id']);
         $generated = 0;
         $errors = [];
 
@@ -157,8 +161,8 @@ class BulkOperationController extends Controller
                     ]
                 );
 
-                if (!$cert->pdf_path) {
-                    \App\Http\Controllers\CertificateController::generatePDF($cert);
+                if (! $cert->pdf_path) {
+                    CertificateController::generatePDF($cert);
                 }
 
                 $generated++;

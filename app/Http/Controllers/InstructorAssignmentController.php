@@ -2,14 +2,15 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Course;
 use App\Models\Assignment;
 use App\Models\AssignmentSubmission;
-use App\Models\GradebookItem;
+use App\Models\Course;
 use App\Models\Grade;
+use App\Models\GradebookItem;
 use App\Notifications\AssignmentGraded;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 
 class InstructorAssignmentController extends Controller
@@ -17,8 +18,8 @@ class InstructorAssignmentController extends Controller
     public function index(Course $course)
     {
         $user = auth()->user();
-        if (!($user->id === $course->created_by && $user->tenant_id === $course->tenant_id) &&
-            !($user->hasRole('tenant_admin') && $user->tenant_id === $course->tenant_id)) {
+        if (! ($user->id === $course->created_by && $user->tenant_id === $course->tenant_id) &&
+            ! ($user->hasRole('tenant_admin') && $user->tenant_id === $course->tenant_id)) {
             abort(403);
         }
 
@@ -34,8 +35,8 @@ class InstructorAssignmentController extends Controller
     public function create(Course $course)
     {
         $user = auth()->user();
-        if (!($user->id === $course->created_by && $user->tenant_id === $course->tenant_id) &&
-            !($user->hasRole('tenant_admin') && $user->tenant_id === $course->tenant_id)) {
+        if (! ($user->id === $course->created_by && $user->tenant_id === $course->tenant_id) &&
+            ! ($user->hasRole('tenant_admin') && $user->tenant_id === $course->tenant_id)) {
             abort(403);
         }
 
@@ -47,8 +48,8 @@ class InstructorAssignmentController extends Controller
     public function store(Request $request, Course $course)
     {
         $user = auth()->user();
-        if (!($user->id === $course->created_by && $user->tenant_id === $course->tenant_id) &&
-            !($user->hasRole('tenant_admin') && $user->tenant_id === $course->tenant_id)) {
+        if (! ($user->id === $course->created_by && $user->tenant_id === $course->tenant_id) &&
+            ! ($user->hasRole('tenant_admin') && $user->tenant_id === $course->tenant_id)) {
             abort(403);
         }
 
@@ -56,7 +57,7 @@ class InstructorAssignmentController extends Controller
             'title' => ['required', 'string', 'max:255'],
             'description' => ['nullable', 'string'],
             'instructions' => ['nullable', 'string'],
-            'section_id' => ['required', 'exists:sections,id'],
+            'section_id' => ['required', Rule::exists('sections', 'id')->where('course_id', $course->id)],
             'file_types' => ['nullable', 'string'],
             'max_file_size' => ['nullable', 'integer', 'min:1', 'max:100'],
             'deadline' => ['nullable', 'date', 'after:now'],
@@ -94,12 +95,14 @@ class InstructorAssignmentController extends Controller
     public function show(Course $course, Assignment $assignment)
     {
         $user = auth()->user();
-        if (!($user->id === $course->created_by && $user->tenant_id === $course->tenant_id) &&
-            !($user->hasRole('tenant_admin') && $user->tenant_id === $course->tenant_id)) {
+        if (! ($user->id === $course->created_by && $user->tenant_id === $course->tenant_id) &&
+            ! ($user->hasRole('tenant_admin') && $user->tenant_id === $course->tenant_id)) {
             abort(403);
         }
 
-        if ($assignment->course_id !== $course->id) abort(404);
+        if ($assignment->course_id !== $course->id) {
+            abort(404);
+        }
 
         $assignment->load(['section', 'submissions.user', 'submissions.grader']);
 
@@ -109,12 +112,14 @@ class InstructorAssignmentController extends Controller
     public function edit(Course $course, Assignment $assignment)
     {
         $user = auth()->user();
-        if (!($user->id === $course->created_by && $user->tenant_id === $course->tenant_id) &&
-            !($user->hasRole('tenant_admin') && $user->tenant_id === $course->tenant_id)) {
+        if (! ($user->id === $course->created_by && $user->tenant_id === $course->tenant_id) &&
+            ! ($user->hasRole('tenant_admin') && $user->tenant_id === $course->tenant_id)) {
             abort(403);
         }
 
-        if ($assignment->course_id !== $course->id) abort(404);
+        if ($assignment->course_id !== $course->id) {
+            abort(404);
+        }
 
         $course->load('sections');
 
@@ -124,18 +129,20 @@ class InstructorAssignmentController extends Controller
     public function update(Request $request, Course $course, Assignment $assignment)
     {
         $user = auth()->user();
-        if (!($user->id === $course->created_by && $user->tenant_id === $course->tenant_id) &&
-            !($user->hasRole('tenant_admin') && $user->tenant_id === $course->tenant_id)) {
+        if (! ($user->id === $course->created_by && $user->tenant_id === $course->tenant_id) &&
+            ! ($user->hasRole('tenant_admin') && $user->tenant_id === $course->tenant_id)) {
             abort(403);
         }
 
-        if ($assignment->course_id !== $course->id) abort(404);
+        if ($assignment->course_id !== $course->id) {
+            abort(404);
+        }
 
         $validated = $request->validate([
             'title' => ['required', 'string', 'max:255'],
             'description' => ['nullable', 'string'],
             'instructions' => ['nullable', 'string'],
-            'section_id' => ['required', 'exists:sections,id'],
+            'section_id' => ['required', Rule::exists('sections', 'id')->where('course_id', $course->id)],
             'file_types' => ['nullable', 'string'],
             'max_file_size' => ['nullable', 'integer', 'min:1', 'max:100'],
             'deadline' => ['nullable', 'date'],
@@ -157,12 +164,14 @@ class InstructorAssignmentController extends Controller
     public function destroy(Course $course, Assignment $assignment)
     {
         $user = auth()->user();
-        if (!($user->id === $course->created_by && $user->tenant_id === $course->tenant_id) &&
-            !($user->hasRole('tenant_admin') && $user->tenant_id === $course->tenant_id)) {
+        if (! ($user->id === $course->created_by && $user->tenant_id === $course->tenant_id) &&
+            ! ($user->hasRole('tenant_admin') && $user->tenant_id === $course->tenant_id)) {
             abort(403);
         }
 
-        if ($assignment->course_id !== $course->id) abort(404);
+        if ($assignment->course_id !== $course->id) {
+            abort(404);
+        }
 
         GradebookItem::where('course_id', $course->id)
             ->where('type', 'assignment')
@@ -184,15 +193,19 @@ class InstructorAssignmentController extends Controller
     public function downloadSubmission(Course $course, Assignment $assignment, AssignmentSubmission $submission)
     {
         $user = auth()->user();
-        if (!($user->id === $course->created_by && $user->tenant_id === $course->tenant_id) &&
-            !($user->hasRole('tenant_admin') && $user->tenant_id === $course->tenant_id)) {
+        if (! ($user->id === $course->created_by && $user->tenant_id === $course->tenant_id) &&
+            ! ($user->hasRole('tenant_admin') && $user->tenant_id === $course->tenant_id)) {
             abort(403);
         }
 
-        if ($assignment->course_id !== $course->id) abort(404);
-        if ($submission->assignment_id !== $assignment->id) abort(404);
+        if ($assignment->course_id !== $course->id) {
+            abort(404);
+        }
+        if ($submission->assignment_id !== $assignment->id) {
+            abort(404);
+        }
 
-        if (!$submission->file_path || !Storage::disk('local')->exists($submission->file_path)) {
+        if (! $submission->file_path || ! Storage::disk('local')->exists($submission->file_path)) {
             return back()->with('error', 'File not found.');
         }
 
@@ -202,13 +215,17 @@ class InstructorAssignmentController extends Controller
     public function gradeForm(Course $course, Assignment $assignment, AssignmentSubmission $submission)
     {
         $user = auth()->user();
-        if (!($user->id === $course->created_by && $user->tenant_id === $course->tenant_id) &&
-            !($user->hasRole('tenant_admin') && $user->tenant_id === $course->tenant_id)) {
+        if (! ($user->id === $course->created_by && $user->tenant_id === $course->tenant_id) &&
+            ! ($user->hasRole('tenant_admin') && $user->tenant_id === $course->tenant_id)) {
             abort(403);
         }
 
-        if ($assignment->course_id !== $course->id) abort(404);
-        if ($submission->assignment_id !== $assignment->id) abort(404);
+        if ($assignment->course_id !== $course->id) {
+            abort(404);
+        }
+        if ($submission->assignment_id !== $assignment->id) {
+            abort(404);
+        }
 
         $submission->load('user');
 
@@ -218,16 +235,20 @@ class InstructorAssignmentController extends Controller
     public function grade(Request $request, Course $course, Assignment $assignment, AssignmentSubmission $submission)
     {
         $user = auth()->user();
-        if (!($user->id === $course->created_by && $user->tenant_id === $course->tenant_id) &&
-            !($user->hasRole('tenant_admin') && $user->tenant_id === $course->tenant_id)) {
+        if (! ($user->id === $course->created_by && $user->tenant_id === $course->tenant_id) &&
+            ! ($user->hasRole('tenant_admin') && $user->tenant_id === $course->tenant_id)) {
             abort(403);
         }
 
-        if ($assignment->course_id !== $course->id) abort(404);
-        if ($submission->assignment_id !== $assignment->id) abort(404);
+        if ($assignment->course_id !== $course->id) {
+            abort(404);
+        }
+        if ($submission->assignment_id !== $assignment->id) {
+            abort(404);
+        }
 
         $validated = $request->validate([
-            'grade' => ['required', 'integer', 'min:0', 'max:' . $assignment->max_score],
+            'grade' => ['required', 'integer', 'min:0', 'max:'.$assignment->max_score],
             'grader_notes' => ['nullable', 'string'],
         ]);
 

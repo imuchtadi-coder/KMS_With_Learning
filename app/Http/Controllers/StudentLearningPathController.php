@@ -32,7 +32,7 @@ class StudentLearningPathController extends Controller
             $path->progress = $path->getUserProgress($user);
         }
 
-        $recommendationService = new LearningPathRecommendationService();
+        $recommendationService = new LearningPathRecommendationService;
         $recommendations = $recommendationService->getDashboardRecommendations($user, 3);
 
         return Inertia::render('Student/LearningPaths/Index', [
@@ -44,8 +44,11 @@ class StudentLearningPathController extends Controller
     public function show(LearningPath $learningPath)
     {
         $user = auth()->user();
+        if ($learningPath->tenant_id !== $user->tenant_id) {
+            abort(404);
+        }
 
-        if (!$learningPath->isPublished()) {
+        if (! $learningPath->isPublished()) {
             abort(404);
         }
 
@@ -55,7 +58,7 @@ class StudentLearningPathController extends Controller
             ->where('user_id', $user->id)
             ->first();
 
-        $isLocked = !$enrollment;
+        $isLocked = ! $enrollment;
 
         $progress = 0;
         $nextCourse = null;
@@ -87,7 +90,11 @@ class StudentLearningPathController extends Controller
         $user = auth()->user();
         $tenantId = auth()->user()->tenant_id;
 
-        if (!$learningPath->isPublished()) {
+        if ($learningPath->tenant_id !== $tenantId) {
+            abort(404);
+        }
+
+        if (! $learningPath->isPublished()) {
             abort(404);
         }
 
@@ -121,11 +128,15 @@ class StudentLearningPathController extends Controller
     {
         $user = auth()->user();
 
+        if ($learningPath->tenant_id !== $user->tenant_id || $course->tenant_id !== $user->tenant_id) {
+            abort(404);
+        }
+
         $enrollment = LearningPathEnrollment::where('learning_path_id', $learningPath->id)
             ->where('user_id', $user->id)
             ->firstOrFail();
 
-        if (!$learningPath->courses()->where('course_id', $course->id)->exists()) {
+        if (! $learningPath->courses()->where('course_id', $course->id)->exists()) {
             abort(404);
         }
 
@@ -157,9 +168,13 @@ class StudentLearningPathController extends Controller
     {
         $user = auth()->user();
 
+        if ($learningPath->tenant_id !== $user->tenant_id) {
+            abort(404);
+        }
+
         $nextCourse = $learningPath->getNextCourseForUser($user);
 
-        if (!$nextCourse) {
+        if (! $nextCourse) {
             return response()->json(['message' => 'No more courses!', 'completed' => true]);
         }
 

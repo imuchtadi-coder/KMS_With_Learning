@@ -2,9 +2,10 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\LearningPath;
 use App\Models\Course;
+use App\Models\LearningPath;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 
 class LearningPathController extends Controller
@@ -43,6 +44,7 @@ class LearningPathController extends Controller
     public function create()
     {
         $courses = Course::where('tenant_id', auth()->user()->tenant_id)->get();
+
         return Inertia::render('Admin/LearningPaths/Create', compact('courses'));
     }
 
@@ -63,7 +65,7 @@ class LearningPathController extends Controller
         ]);
 
         return redirect()->route('admin.learning-paths.edit', $path)
-                       ->with('success', 'Learning Path created successfully!');
+            ->with('success', 'Learning Path created successfully!');
     }
 
     /**
@@ -93,7 +95,7 @@ class LearningPathController extends Controller
         $learningPath->update($validated);
 
         return redirect()->route('admin.learning-paths.show', $learningPath)
-                       ->with('success', 'Learning Path updated successfully!');
+            ->with('success', 'Learning Path updated successfully!');
     }
 
     /**
@@ -106,7 +108,7 @@ class LearningPathController extends Controller
         $learningPath->delete();
 
         return redirect()->route('admin.learning-paths.index')
-                       ->with('success', 'Learning Path deleted successfully!');
+            ->with('success', 'Learning Path deleted successfully!');
     }
 
     /**
@@ -117,7 +119,10 @@ class LearningPathController extends Controller
         $this->authorize('update', $learningPath);
 
         $validated = $request->validate([
-            'course_id' => 'required|exists:courses,id',
+            'course_id' => [
+                'required',
+                Rule::exists('courses', 'id')->where('tenant_id', $learningPath->tenant_id),
+            ],
         ]);
 
         $course = Course::findOrFail($validated['course_id']);
@@ -131,76 +136,77 @@ class LearningPathController extends Controller
     }
 
     /**
- * Reorder course in learning path
- */
-public function reorderCourse(
-    Request $request,
-    LearningPath $learningPath,
-    Course $course
-) {
-    $this->authorize('update', $learningPath);
+     * Reorder course in learning path
+     */
+    public function reorderCourse(
+        Request $request,
+        LearningPath $learningPath,
+        Course $course
+    ) {
+        $this->authorize('update', $learningPath);
+        abort_unless($course->tenant_id === $learningPath->tenant_id, 404);
 
-    $direction = $request->input('direction', 'down');
+        $direction = $request->input('direction', 'down');
 
-    // Check whether the course exists in this learning path
-    $courseInPath = $learningPath->courses()
-        ->where('courses.id', $course->id)
-        ->first();
-
-    if (!$courseInPath) {
-        return back()->with('error', 'Course not found in this path!');
-    }
-
-    // Get current order from pivot table
-    $currentOrder = $courseInPath->pivot->order;
-
-    // Get maximum order from pivot table
-    $maxOrder = $learningPath->courses()
-        ->max('learning_path_courses.order');
-
-    if ($direction === 'up' && $currentOrder > 0) {
-
-        // Find course immediately above
-        $swapCourse = $learningPath->courses()
-            ->wherePivot('order', $currentOrder - 1)
+        // Check whether the course exists in this learning path
+        $courseInPath = $learningPath->courses()
+            ->where('courses.id', $course->id)
             ->first();
 
-        if ($swapCourse) {
-            // Swap orders
-            $learningPath->courses()->updateExistingPivot(
-                $swapCourse->id,
-                ['order' => $currentOrder]
-            );
-
-            $learningPath->courses()->updateExistingPivot(
-                $course->id,
-                ['order' => $currentOrder - 1]
-            );
+        if (! $courseInPath) {
+            return back()->with('error', 'Course not found in this path!');
         }
 
-    } elseif ($direction === 'down' && $currentOrder < $maxOrder) {
+        // Get current order from pivot table
+        $currentOrder = $courseInPath->pivot->order;
 
-        // Find course immediately below
-        $swapCourse = $learningPath->courses()
-            ->wherePivot('order', $currentOrder + 1)
-            ->first();
+        // Get maximum order from pivot table
+        $maxOrder = $learningPath->courses()
+            ->max('learning_path_courses.order');
 
-        if ($swapCourse) {
-            // Swap orders
-            $learningPath->courses()->updateExistingPivot(
-                $swapCourse->id,
-                ['order' => $currentOrder]
-            );
+        if ($direction === 'up' && $currentOrder > 0) {
 
-            $learningPath->courses()->updateExistingPivot(
-                $course->id,
-                ['order' => $currentOrder + 1]
-            );
+            // Find course immediately above
+            $swapCourse = $learningPath->courses()
+                ->wherePivot('order', $currentOrder - 1)
+                ->first();
+
+            if ($swapCourse) {
+                // Swap orders
+                $learningPath->courses()->updateExistingPivot(
+                    $swapCourse->id,
+                    ['order' => $currentOrder]
+                );
+
+                $learningPath->courses()->updateExistingPivot(
+                    $course->id,
+                    ['order' => $currentOrder - 1]
+                );
+            }
+
+        } elseif ($direction === 'down' && $currentOrder < $maxOrder) {
+
+            // Find course immediately below
+            $swapCourse = $learningPath->courses()
+                ->wherePivot('order', $currentOrder + 1)
+                ->first();
+
+            if ($swapCourse) {
+                // Swap orders
+                $learningPath->courses()->updateExistingPivot(
+                    $swapCourse->id,
+                    ['order' => $currentOrder]
+                );
+
+                $learningPath->courses()->updateExistingPivot(
+                    $course->id,
+                    ['order' => $currentOrder + 1]
+                );
+            }
         }
+
+        return back()->with('success', 'Course reordered successfully!');
     }
-
-    return back()->with('success', 'Course reordered successfully!');
-}
 
     /**
      * Remove course from learning path
@@ -208,6 +214,7 @@ public function reorderCourse(
     public function removeCourse(Request $request, LearningPath $learningPath, Course $course)
     {
         $this->authorize('update', $learningPath);
+        abort_unless($course->tenant_id === $learningPath->tenant_id, 404);
 
         $learningPath->removeCourse($course);
 
@@ -219,19 +226,21 @@ public function reorderCourse(
      */
     public function publish(LearningPath $learningPath)
     {
-        \Log::info('Publish method called for learning path: ' . $learningPath->id . ' by user: ' . auth()->id());
+        \Log::info('Publish method called for learning path: '.$learningPath->id.' by user: '.auth()->id());
 
         $this->authorize('update', $learningPath);
 
         if ($learningPath->courses()->count() === 0) {
-            \Log::warning('Cannot publish path without courses: ' . $learningPath->id);
+            \Log::warning('Cannot publish path without courses: '.$learningPath->id);
+
             return back()->with('error', 'Cannot publish path without courses!');
         }
 
-        \Log::info('Publishing learning path: ' . $learningPath->id);
+        \Log::info('Publishing learning path: '.$learningPath->id);
         $learningPath->publish();
 
-        \Log::info('Learning path published successfully: ' . $learningPath->id);
+        \Log::info('Learning path published successfully: '.$learningPath->id);
+
         return back()->with('success', 'Learning Path published!');
     }
 

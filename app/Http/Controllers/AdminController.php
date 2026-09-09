@@ -2,15 +2,17 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\User;
-use App\Models\Tenant;
 use App\Models\Course;
-use Stancl\Tenancy\Database\Models\Domain;
+use App\Models\Tenant;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules\Password;
 use Inertia\Inertia;
+use Spatie\Permission\Models\Role;
+use Stancl\Tenancy\Database\Models\Domain;
 
 class AdminController extends Controller
 {
@@ -22,7 +24,7 @@ class AdminController extends Controller
         $user = auth()->user();
         $isTenantAdmin = $user->hasRole('tenant_admin');
 
-        if($isTenantAdmin) {
+        if ($isTenantAdmin) {
             // For tenant admins, show stats only for their tenant
             $totalUsers = User::where('tenant_id', $user->tenant_id)->count();
             $totalAdmins = User::where('tenant_id', $user->tenant_id)->role('tenant_admin')->count();
@@ -49,7 +51,7 @@ class AdminController extends Controller
         $user = auth()->user();
         $isTenantAdmin = $user->hasRole('tenant_admin');
 
-        if($isTenantAdmin) {
+        if ($isTenantAdmin) {
             $users = User::where('tenant_id', $user->tenant_id)->with('roles')->paginate(10);
         } else {
             $users = User::with('roles')->paginate(10);
@@ -67,8 +69,8 @@ class AdminController extends Controller
 
         // Filter roles based on the user's role
         $roles = $authUser->hasRole('tenant_admin')
-            ? \Spatie\Permission\Models\Role::where('name', '!=', 'superadmin')->get()
-            : \Spatie\Permission\Models\Role::all();
+            ? Role::where('name', '!=', 'superadmin')->get()
+            : Role::all();
 
         $tenants = $authUser->hasRole('tenant_admin')
             ? Tenant::where('id', $authUser->tenant_id)->get()
@@ -88,8 +90,20 @@ class AdminController extends Controller
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'email', 'unique:users,email'],
             'password' => ['required', 'confirmed', Password::defaults()],
-            'role' => ['required', 'string', 'exists:roles,name'],
-            'tenant_id' => ['required', 'string', 'exists:tenants,id'],
+            'role' => [
+                'required',
+                'string',
+                $authUser->hasRole('tenant_admin')
+                    ? Rule::in(['tenant_admin', 'instructor', 'student'])
+                    : Rule::exists('roles', 'name'),
+            ],
+            'tenant_id' => [
+                'required',
+                'string',
+                $authUser->hasRole('tenant_admin')
+                    ? Rule::in([$authUser->tenant_id])
+                    : Rule::exists('tenants', 'id'),
+            ],
             'phone' => ['nullable', 'string', 'max:20'],
             'birthday' => ['nullable', 'date', 'before:today'],
             'department' => ['nullable', 'string', 'max:100'],
@@ -97,7 +111,7 @@ class AdminController extends Controller
         ]);
 
         // Tenant admin can only create users in their own tenant
-        if($authUser->hasRole('tenant_admin') && $validated['tenant_id'] !== $authUser->tenant_id) {
+        if ($authUser->hasRole('tenant_admin') && $validated['tenant_id'] !== $authUser->tenant_id) {
             abort(403, 'Unauthorized');
         }
 
@@ -115,7 +129,7 @@ class AdminController extends Controller
         $user->assignRole($validated['role']);
 
         return redirect()->route('admin.users.index')
-                       ->with('success', "User '{$validated['name']}' created successfully!");
+            ->with('success', "User '{$validated['name']}' created successfully!");
     }
 
     /**
@@ -126,14 +140,17 @@ class AdminController extends Controller
         $authUser = auth()->user();
 
         // Tenant admin can only edit users in their tenant
-        if($authUser->hasRole('tenant_admin') && $user->tenant_id !== $authUser->tenant_id) {
+        if ($authUser->hasRole('tenant_admin') && $user->tenant_id !== $authUser->tenant_id) {
             abort(403, 'Unauthorized');
         }
 
-        $roles = \Spatie\Permission\Models\Role::all();
+        $roles = $authUser->hasRole('tenant_admin')
+            ? Role::whereIn('name', ['tenant_admin', 'instructor', 'student'])->get()
+            : Role::all();
         $tenants = $authUser->hasRole('tenant_admin') ?
                   Tenant::where('id', $authUser->tenant_id)->get() :
                   Tenant::all();
+
         return Inertia::render('Admin/Users/Edit', compact('user', 'roles', 'tenants'));
     }
 
@@ -145,14 +162,26 @@ class AdminController extends Controller
         $authUser = auth()->user();
 
         // Tenant admin can only update users in their tenant
-        if($authUser->hasRole('tenant_admin') && $user->tenant_id !== $authUser->tenant_id) {
+        if ($authUser->hasRole('tenant_admin') && $user->tenant_id !== $authUser->tenant_id) {
             abort(403, 'Unauthorized');
         }
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
-            'email' => ['required', 'email', 'unique:users,email,' . $user->id],
-            'role' => ['required', 'string', 'exists:roles,name'],
-            'tenant_id' => ['required', 'string', 'exists:tenants,id'],
+            'email' => ['required', 'email', 'unique:users,email,'.$user->id],
+            'role' => [
+                'required',
+                'string',
+                $authUser->hasRole('tenant_admin')
+                    ? Rule::in(['tenant_admin', 'instructor', 'student'])
+                    : Rule::exists('roles', 'name'),
+            ],
+            'tenant_id' => [
+                'required',
+                'string',
+                $authUser->hasRole('tenant_admin')
+                    ? Rule::in([$authUser->tenant_id])
+                    : Rule::exists('tenants', 'id'),
+            ],
             'password' => ['nullable', 'min:8'],
             'phone' => ['nullable', 'string', 'max:20'],
             'birthday' => ['nullable', 'date', 'before:today'],
@@ -171,7 +200,7 @@ class AdminController extends Controller
         ];
 
         // Only update password if provided
-        if($validated['password']) {
+        if ($validated['password']) {
             $updateData['password'] = Hash::make($validated['password']);
         }
 
@@ -181,7 +210,7 @@ class AdminController extends Controller
         $user->syncRoles($validated['role']);
 
         return redirect()->route('admin.users.index')
-                       ->with('success', "User updated successfully!");
+            ->with('success', 'User updated successfully!');
     }
 
     /**
@@ -192,7 +221,7 @@ class AdminController extends Controller
         $authUser = auth()->user();
 
         // Tenant admin can only delete users in their tenant
-        if($authUser->hasRole('tenant_admin') && $user->tenant_id !== $authUser->tenant_id) {
+        if ($authUser->hasRole('tenant_admin') && $user->tenant_id !== $authUser->tenant_id) {
             abort(403, 'Unauthorized');
         }
 
@@ -200,7 +229,7 @@ class AdminController extends Controller
         $user->delete();
 
         return redirect()->route('admin.users.index')
-                       ->with('success', "User '$userName' deleted successfully!");
+            ->with('success', "User '$userName' deleted successfully!");
     }
 
     // ========== COURSE MANAGEMENT (Tenant Admin) ==========
@@ -278,6 +307,7 @@ class AdminController extends Controller
     public function tenants()
     {
         $tenants = Tenant::with('domains')->paginate(10);
+
         return Inertia::render('Admin/Tenants/Index', compact('tenants'));
     }
 
@@ -311,7 +341,7 @@ class AdminController extends Controller
         ]);
 
         return redirect()->route('admin.tenants.index')
-                       ->with('success', "Tenant '{$validated['name']}' created successfully!");
+            ->with('success', "Tenant '{$validated['name']}' created successfully!");
     }
 
     /**
@@ -329,7 +359,7 @@ class AdminController extends Controller
     {
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
-            'domain' => ['required', 'string', 'unique:domains,domain,' . ($tenant->domains()->first()?->id ?? 0)],
+            'domain' => ['required', 'string', 'unique:domains,domain,'.($tenant->domains()->first()?->id ?? 0)],
         ]);
 
         $tenant->update(['name' => $validated['name']]);
@@ -338,7 +368,7 @@ class AdminController extends Controller
         }
 
         return redirect()->route('admin.tenants.index')
-                       ->with('success', "Tenant updated successfully!");
+            ->with('success', 'Tenant updated successfully!');
     }
 
     /**
@@ -346,84 +376,82 @@ class AdminController extends Controller
      */
     public function mailSettings()
     {
-    $tenant = auth()->user()->tenant;
+        $tenant = auth()->user()->tenant;
 
-    return Inertia::render('Admin/Mail/Settings', [
-        'mailSettings' => [
-        'mail_from_address' => $tenant->mail_from_address,
-        'mail_from_name' => $tenant->mail_from_name,
-        'mail_host' => $tenant->mail_host,
-        'mail_port' => $tenant->mail_port,
-        'mail_username' => $tenant->mail_username,
-        'mail_encryption' => $tenant->mail_encryption,
-        // Password sengaja TIDAK dikirim ke frontend
-        ],
-    ]);
-}
-
- 
-/**
- * Update mail settings
- */
-public function updateMailSettings(Request $request)
-{
-    $validated = $request->validate([
-        'mail_from_address' => ['nullable', 'email', 'max:255'],
-        'mail_from_name' => ['nullable', 'string', 'max:255'],
-        'mail_host' => ['nullable', 'string', 'max:255'],
-        'mail_port' => ['nullable', 'integer', 'min:1', 'max:65535'],
-        'mail_username' => ['nullable', 'string', 'max:255'],
-        'mail_password' => ['nullable', 'string', 'max:255'],
-        'mail_encryption' => ['nullable', 'string', 'in:tls,ssl,'],
-    ]);
-
-    // Ambil tenant milik user yang sedang login
-    $tenant = auth()->user()->tenant;
-
-    /*
-     * Ambil data tenant yang sudah ada.
-     * Jangan menimpa data tenant lain yang mungkin sudah tersimpan.
-     */
-    $data = $tenant->data ?? [];
-
-    /*
-     * Simpan Mail Settings ke dalam kolom JSON "data"
-     */
-    $data['mail_from_address'] = $validated['mail_from_address'];
-    $data['mail_from_name'] = $validated['mail_from_name'];
-    $data['mail_host'] = $validated['mail_host'];
-    $data['mail_port'] = $validated['mail_port'];
-    $data['mail_username'] = $validated['mail_username'];
-    $data['mail_encryption'] = $validated['mail_encryption'] ?: null;
-
-    /*
-     * Password hanya diperbarui jika user mengisi password baru.
-     *
-     * Password disimpan dalam bentuk encrypted,
-     * bukan plain text.
-     */
-    if (!empty($validated['mail_password'])) {
-        $data['mail_password_encrypted'] = Crypt::encryptString(
-            $validated['mail_password']
-        );
+        return Inertia::render('Admin/Mail/Settings', [
+            'mailSettings' => [
+                'mail_from_address' => $tenant->mail_from_address,
+                'mail_from_name' => $tenant->mail_from_name,
+                'mail_host' => $tenant->mail_host,
+                'mail_port' => $tenant->mail_port,
+                'mail_username' => $tenant->mail_username,
+                'mail_encryption' => $tenant->mail_encryption,
+                // Password sengaja TIDAK dikirim ke frontend
+            ],
+        ]);
     }
 
-    /*
-     * Simpan seluruh data kembali ke kolom "data" tenant.
+    /**
+     * Update mail settings
      */
-    $tenant->update([
-        'data' => $data,
-    ]);
+    public function updateMailSettings(Request $request)
+    {
+        $validated = $request->validate([
+            'mail_from_address' => ['nullable', 'email', 'max:255'],
+            'mail_from_name' => ['nullable', 'string', 'max:255'],
+            'mail_host' => ['nullable', 'string', 'max:255'],
+            'mail_port' => ['nullable', 'integer', 'min:1', 'max:65535'],
+            'mail_username' => ['nullable', 'string', 'max:255'],
+            'mail_password' => ['nullable', 'string', 'max:255'],
+            'mail_encryption' => ['nullable', 'string', 'in:tls,ssl,'],
+        ]);
 
-    /*
-     * Kembali ke halaman Mail Settings
-     * dengan flash message sukses.
-     */
-    return redirect()
-        ->route('admin.mail-settings')
-        ->with('success', 'Mail settings updated successfully.');
-}
+        // Ambil tenant milik user yang sedang login
+        $tenant = auth()->user()->tenant;
 
+        /*
+         * Ambil data tenant yang sudah ada.
+         * Jangan menimpa data tenant lain yang mungkin sudah tersimpan.
+         */
+        $data = $tenant->data ?? [];
+
+        /*
+         * Simpan Mail Settings ke dalam kolom JSON "data"
+         */
+        $data['mail_from_address'] = $validated['mail_from_address'];
+        $data['mail_from_name'] = $validated['mail_from_name'];
+        $data['mail_host'] = $validated['mail_host'];
+        $data['mail_port'] = $validated['mail_port'];
+        $data['mail_username'] = $validated['mail_username'];
+        $data['mail_encryption'] = $validated['mail_encryption'] ?: null;
+
+        /*
+         * Password hanya diperbarui jika user mengisi password baru.
+         *
+         * Password disimpan dalam bentuk encrypted,
+         * bukan plain text.
+         */
+        if (! empty($validated['mail_password'])) {
+            $data['mail_password_encrypted'] = Crypt::encryptString(
+                $validated['mail_password']
+            );
+        }
+
+        /*
+         * Simpan seluruh data kembali ke kolom "data" tenant.
+         */
+        $tenant->update([
+            'data' => $data,
+        ]);
+
+        /*
+         * Kembali ke halaman Mail Settings
+         * dengan flash message sukses.
+         */
+        return redirect()
+            ->route('admin.mail-settings')
+            ->with('success', 'Mail settings updated successfully.');
+    }
 
     /**
      * Delete tenant
@@ -435,6 +463,6 @@ public function updateMailSettings(Request $request)
         $tenant->delete();
 
         return redirect()->route('admin.tenants.index')
-                       ->with('success', "Tenant '{$tenantName}' deleted successfully!");
+            ->with('success', "Tenant '{$tenantName}' deleted successfully!");
     }
 }
