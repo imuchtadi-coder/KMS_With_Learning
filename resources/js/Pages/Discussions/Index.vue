@@ -1,12 +1,13 @@
 <script setup>
 import { ref, computed } from 'vue'
-import { router } from '@inertiajs/vue3'
+import { router, usePage } from '@inertiajs/vue3'
 
 const props = defineProps({
   discussions: { type: Object, required: true },
   course: { type: Object, default: null },
 })
 
+const page = usePage()
 const search = ref('')
 
 const filtered = computed(() => {
@@ -16,6 +17,18 @@ const filtered = computed(() => {
     d.title.toLowerCase().includes(q) || d.content?.toLowerCase().includes(q)
   )
 })
+
+const canPinDiscussion = computed(() => {
+  console.log('AUTH USER:', page.props.auth?.user)
+  console.log('ROLES:', page.props.auth?.user?.roles)
+  const roles = page.props.auth?.user?.roles ?? []
+
+  return roles.includes('admin') || roles.includes('instructor')
+})
+
+const togglePin = (discussion) => { 
+  router.post( route('discussions.pin', discussion.id), {}, { preserveScroll: true, } ) 
+}
 </script>
 
 <template>
@@ -76,10 +89,25 @@ const filtered = computed(() => {
               <span v-if="disc.lesson">&bull; {{ disc.lesson?.title }}</span>
             </div>
           </div>
-          <div class="text-right text-body-2 text-medium-emphasis flex-shrink-0" style="min-width: 100px;">
+          <!-- <div class="text-right text-body-2 text-medium-emphasis flex-shrink-0" style="min-width: 100px;">
             <div>{{ disc.replies_count ?? 0 }} replies</div>
             <div class="text-caption">{{ new Date(disc.created_at).toLocaleDateString() }}</div>
+          </div> -->
+        <div class="d-flex align-center ga-3 flex-shrink-0"> 
+          <div class="text-right text-body-2 text-medium-emphasis" style="min-width: 100px;"> 
+            <div>{{ disc.replies_count ?? 0 }} replies</div> 
+              <div class="text-caption"> 
+                {{ new Date(disc.created_at).toLocaleDateString() }} 
+            </div> 
           </div>
+
+          <VBtn 
+            v-if="canPinDiscussion"
+            :color="disc.is_pinned ? 'primary' : 'default'" 
+            variant="tonal" size="small" :prepend-icon="disc.is_pinned ? 'mdi-pin' : 'mdi-pin-outline'" @click.prevent.stop="togglePin(disc)" > 
+            {{ disc.is_pinned ? 'Unpin' : 'Pin' }} 
+          </VBtn> 
+        </div>
         </VCardText>
       </VCard>
     </div>

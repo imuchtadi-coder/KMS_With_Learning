@@ -1,5 +1,5 @@
 <script setup>
-defineProps({
+const props = defineProps({
   grades: { type: Array, default: () => [] },
 })
 </script>
@@ -10,12 +10,12 @@ defineProps({
 
     <div v-if="grades.length" class="grid-list">
       <VRow>
-        <VCol v-for="enrollment in grades" :key="enrollment.id" cols="12" sm="6" lg="4">
-          <VCard flat border hover>
-            <div class="bg-gradient-to-r from-primary to-primary-darken-1 pa-6 d-flex align-end" style="min-height: 96px;">
-              <h5 class="text-h5 font-weight-bold text-white">{{ enrollment.course?.title }}</h5>
+        <VCol v-for="enrollment in grades" :key="enrollment.id" cols="12" sm="6" lg="4" class="d-flex">
+          <VCard flat border hover class="w-100 d-flex flex-column">
+            <div class="bg-gradient-to-r from-primary to-primary-darken-1 pa-4 d-flex align-center" style="min-height: 72px;">
+              <h5 class="text-h5 font-weight-bold text-black">{{ enrollment.course?.title }}</h5>
             </div>
-            <VCardText class="text-center pb-0">
+            <VCardText class="text-center pb-4 flex-grow-1 d-flex flex-column">
               <div v-if="enrollment.final_percentage !== null">
                 <div class="text-h3 font-weight-bold" :class="enrollment.final_percentage >= 70 ? 'text-success' : 'text-error'">
                   {{ enrollment.final_grade }}
@@ -37,7 +37,7 @@ defineProps({
                 variant="tonal"
                 color="secondary"
                 block
-                class="mt-2"
+                class="mt-auto"
                 :href="route('student.grades.course', enrollment.course?.id)"
               >
                 View Details
