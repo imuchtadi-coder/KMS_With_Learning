@@ -14,6 +14,17 @@ const props = defineProps({
 })
 
 const completing = ref(false)
+const previewDialog = ref(false)
+const previewMaterial = ref(null)
+
+function openPreview(material) {
+  previewMaterial.value = material
+  previewDialog.value = true
+}
+
+function closePreview() {
+  previewDialog.value = false
+}
 const sections = computed(() => props.course.sections || [])
 const readyVideo = computed(() => {
   return props.lesson.videos?.find(v => v.status === 'ready')
@@ -95,6 +106,14 @@ const allCourseLessons = computed(() => {
 function formatFileSize(bytes) {
   if (!bytes) return '0 MB'
   return (bytes / 1024 / 1024).toFixed(2) + ' MB'
+}
+
+function canPreview(material) {
+  const extension = material.file_type
+    ?.toLowerCase()
+    ?.replace('.', '')
+
+  return ['pdf', 'ppt', 'pptx', 'doc', 'docx'].includes(extension)
 }
 
 function formatDate(date) {
@@ -186,15 +205,28 @@ function formatDate(date) {
                   {{ material.file_type?.toUpperCase() }} • {{ formatFileSize(material.file_size) }}
                 </VListItemSubtitle>
                 <template #append>
-                  <VBtn
-                    variant="tonal"
-                    color="primary"
-                    size="small"
-                    :href="route('student.materials.download', material.id)"
-                  >
-                    <VIcon start icon="mdi-download" size="16" />
-                    Download
-                  </VBtn>
+                  <div class="d-flex ga-2">
+                    <VBtn
+                      v-if="canPreview(material)"
+                      variant="tonal"
+                      color="primary"
+                      size="small"
+                      @click="openPreview(material)"
+                    >
+                      <VIcon start icon="mdi-eye" size="16" />
+                      Preview
+                    </VBtn>
+
+                    <VBtn
+                      variant="outlined"
+                      color="primary"
+                      size="small"
+                      :href="route('student.materials.download', material.id)"
+                    >
+                      <VIcon start icon="mdi-download" size="16" />
+                      Download
+                    </VBtn>
+                  </div>
                 </template>
               </VListItem>
             </VList>
@@ -224,6 +256,64 @@ function formatDate(date) {
           </VAlert>
         </VCardText>
       </VCard>
+
+      <!-- Material Preview Dialog -->
+      <VDialog
+        v-if="previewMaterial"
+        v-model="previewDialog"
+        max-width="1000"
+        scrollable
+      >
+        <VCard>
+          <VCardTitle class="d-flex align-center justify-space-between">
+            <span class="text-h6">
+              {{ previewMaterial?.title || 'Material Preview' }}
+            </span>
+
+            <VBtn
+              icon
+              variant="text"
+              size="small"
+              @click="closePreview"
+            >
+              <VIcon icon="mdi-close" />
+            </VBtn>
+          </VCardTitle>
+
+          <VDivider />
+
+          <VCardText class="pa-0">
+            <div class="material-preview">
+              <iframe
+                :src="route('student.materials.preview', previewMaterial.id)"
+                class="material-preview__iframe"
+                title="Material Preview"
+              />
+            </div>
+          </VCardText>
+
+          <VDivider />
+
+          <VCardActions>
+            <VSpacer />
+
+            <VBtn
+              variant="tonal"
+              @click="closePreview"
+            >
+              Close
+            </VBtn>
+
+            <VBtn
+              color="primary"
+              :href="route('student.materials.download', previewMaterial.id)"
+            >
+              <VIcon start icon="mdi-download" />
+              Download
+            </VBtn>
+          </VCardActions>
+        </VCard>
+      </VDialog>
 
       <!-- Navigation -->
       <div class="d-flex justify-space-between ga-4 mb-6">
@@ -370,5 +460,18 @@ function formatDate(date) {
 
 .lesson-item:hover {
   background-color: rgba(var(--v-theme-primary), 0.08);
+}
+
+.material-preview {
+  width: 100%;
+  height: 70vh;
+  background: #f5f5f5;
+}
+
+.material-preview__iframe {
+  width: 100%;
+  height: 100%;
+  border: 0;
+  display: block;
 }
 </style>

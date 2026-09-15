@@ -249,7 +249,7 @@ class InstructorQuizController extends Controller
     public function publish(Course $course, Quiz $quiz)
     {
         $user = auth()->user();
-        if (! ($user->hasRole('tenant_admin') && $user->tenant_id === $course->tenant_id)) {
+        if (! ($user->hasRole('instructor') && $user->tenant_id === $course->tenant_id)) {
             abort(403);
         }
 
@@ -361,7 +361,7 @@ class InstructorQuizController extends Controller
     public function unpublish(Course $course, Quiz $quiz)
     {
         $user = auth()->user();
-        if (! ($user->hasRole('tenant_admin') && $user->tenant_id === $course->tenant_id)) {
+        if (! ($user->hasRole('instructor') && $user->tenant_id === $course->tenant_id)) {
             abort(403);
         }
 

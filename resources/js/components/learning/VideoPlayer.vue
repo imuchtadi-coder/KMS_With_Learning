@@ -148,6 +148,7 @@ async function initializeYoutube(currentInitialization) {
         onReady: event => {
           if (player !== youtubePlayer) return
           const iframe = event.target.getIframe()
+          iframe.classList.add('video-player__youtube-iframe')
           iframe.setAttribute('title', props.video?.title || 'YouTube video player')
           iframe.setAttribute('referrerpolicy', 'strict-origin-when-cross-origin')
           iframe.setAttribute('allow', 'encrypted-media; picture-in-picture; fullscreen')
@@ -291,6 +292,13 @@ onBeforeUnmount(cleanup)
   height: 100%;
   border: 0;
   object-fit: contain;
+}
+
+.video-player :deep(.video-player__youtube-iframe) {
+  width: 100% !important;
+  height: 100% !important;
+  border: 0 !important;
+  display: block !important;
 }
 
 .video-player__placeholder,

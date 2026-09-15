@@ -181,4 +181,30 @@ class MaterialController extends Controller
 
         return response()->json($materials);
     }
+
+    /**
+     * Preview a material file (inline response for students)
+     */
+    public function preview(Material $material)
+    {
+        // Authorize - check if user is instructor or student enrolled in course
+        $lesson = $material->lesson;
+        $course = $lesson->section->course;
+        $user = auth()->user();
+
+        // Allow if instructor or admin
+        if ($user->id === $course->created_by || $user->hasRole('tenant_admin')) {
+            // Instructor/Admin can preview
+        } elseif ($user->enrollments()->where('course_id', $course->id)->exists()) {
+            // Student enrolled in course can preview
+        } else {
+            abort(403, 'Unauthorized to preview this material');
+        }
+
+        $filename = $material->title . '.' . $material->file_type;
+
+        return Storage::response($material->file_path, $filename, [
+            'Content-Disposition' => 'inline; filename="' . $filename . '"',
+        ]);
+    }
 }

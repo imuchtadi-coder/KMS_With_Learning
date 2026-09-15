@@ -289,6 +289,7 @@ Route::middleware('auth')->group(function () {
 
         // Materials
         Route::get('/student/materials/{material}/download', [MaterialController::class, 'download'])->name('student.materials.download');
+        Route::get('/student/materials/{material}/preview', [MaterialController::class, 'preview'])->name('student.materials.preview');
 
         // Certificates
         Route::get('/student/certificates/{certificate}/download', [CertificateController::class, 'download'])->name('student.certificates.download');

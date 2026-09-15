@@ -15,10 +15,14 @@ class SecurityHeaders
         $response = $next($request);
 
         // Prevent clickjacking
-        $response->headers->set(
-            'X-Frame-Options',
-            'DENY'
-        );
+        // $response->headers->set(
+        //     'X-Frame-Options',
+        //     'DENY'
+        // );
+        $isMaterialPreview = $request->routeIs('student.materials.preview');
+        if (!$isMaterialPreview) {
+            $response->headers->set('X-Frame-Options', 'DENY');
+        }
 
         // Prevent MIME type sniffing
         $response->headers->set(
@@ -92,7 +96,7 @@ class SecurityHeaders
 
             "object-src 'none'",
 
-            "frame-ancestors 'none'",
+            "frame-ancestors " . ($isMaterialPreview ? "'self'" : "'none'"),
 
             "form-action 'self'",
 
@@ -110,7 +114,7 @@ class SecurityHeaders
 
             "worker-src 'self' blob:",
 
-            'frame-src https://www.youtube.com https://www.youtube-nocookie.com',
+            "frame-src 'self' https://www.youtube.com https://www.youtube-nocookie.com",
         ];
 
         /*
