@@ -196,6 +196,8 @@ Route::middleware('auth')->group(function () {
 
         // Quizzes
         Route::get('/instructor/courses/{course}/quizzes', [InstructorQuizController::class, 'index'])->name('instructor.quizzes.index');
+        Route::get('/instructor/courses/{course}/quizzes-grading', [InstructorQuizController::class, 'grading'])->name('instructor.courses.quiz-grading');
+        Route::get('/instructor/courses/{course}/quizzes/{quiz}/attempts', [InstructorQuizController::class, 'attempts'])->name('instructor.quizzes.attempts');
         Route::get('/instructor/courses/{course}/quizzes/create', [InstructorQuizController::class, 'create'])->name('instructor.quizzes.create');
         Route::post('/instructor/courses/{course}/quizzes', [InstructorQuizController::class, 'store'])->name('instructor.quizzes.store');
         Route::get('/instructor/courses/{course}/quizzes/{quiz}', [InstructorQuizController::class, 'show'])->name('instructor.quizzes.show');

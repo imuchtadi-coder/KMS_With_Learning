@@ -96,6 +96,9 @@ function destroy(course) {
                 <VIcon icon="mdi-delete" size="20" />
               </VBtn>
             </div>
+            <div class="d-flex ga-2" style="flex-wrap: nowrap; margin-top: 4%;">
+              <VBtn variant="tonal" color="info" block :href="route('instructor.courses.quiz-grading', course.id)">Quiz Grading</VBtn>
+            </div>
           </VCardText>
         </VCard>
       </VCol>
