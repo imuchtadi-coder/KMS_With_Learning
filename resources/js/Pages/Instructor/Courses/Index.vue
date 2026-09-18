@@ -97,7 +97,10 @@ function destroy(course) {
               </VBtn>
             </div>
             <div class="d-flex ga-2" style="flex-wrap: nowrap; margin-top: 4%;">
-              <VBtn variant="tonal" color="info" block :href="route('instructor.courses.quiz-grading', course.id)">Quiz Grading</VBtn>
+              <VBtn
+                variant="tonal" color="info" class="flex-grow-1 text-no-wrap" :href="route('instructor.courses.quiz-grading', course.id)">Quiz Grading</VBtn>
+              <VBtn
+                variant="tonal" color="success" class="flex-grow-1 text-no-wrap" :href="route('instructor.assignments.index', course.id)">Assignment Grading</VBtn>
             </div>
           </VCardText>
         </VCard>

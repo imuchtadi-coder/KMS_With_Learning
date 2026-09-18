@@ -214,7 +214,7 @@ Route::middleware('auth')->group(function () {
         Route::get('/instructor/courses/{course}/exams/{quiz}/sessions', [InstructorExamController::class, 'sessions'])->name('instructor.exams.sessions');
         Route::post('/instructor/courses/{course}/exams/{quiz}/force-submit/{attempt}', [InstructorExamController::class, 'forceSubmit'])->name('instructor.exams.force-submit');
 
-        // Assignments
+        // Instructor Assignments
         Route::get('/instructor/courses/{course}/assignments', [InstructorAssignmentController::class, 'index'])->name('instructor.assignments.index');
         Route::get('/instructor/courses/{course}/assignments/create', [InstructorAssignmentController::class, 'create'])->name('instructor.assignments.create');
         Route::post('/instructor/courses/{course}/assignments', [InstructorAssignmentController::class, 'store'])->name('instructor.assignments.store');
@@ -223,6 +223,7 @@ Route::middleware('auth')->group(function () {
         Route::put('/instructor/courses/{course}/assignments/{assignment}', [InstructorAssignmentController::class, 'update'])->name('instructor.assignments.update');
         Route::delete('/instructor/courses/{course}/assignments/{assignment}', [InstructorAssignmentController::class, 'destroy'])->name('instructor.assignments.destroy');
         Route::get('/instructor/courses/{course}/assignments/{assignment}/submissions/{submission}/download', [InstructorAssignmentController::class, 'downloadSubmission'])->name('instructor.assignments.submissions.download');
+        Route::get('/instructor/courses/{course}/assignments/{assignment}/submissions/{submission}/preview', [InstructorAssignmentController::class, 'previewSubmission'])->name('instructor.assignments.submissions.preview');
         Route::get('/instructor/courses/{course}/assignments/{assignment}/submissions/{submission}/grade', [InstructorAssignmentController::class, 'gradeForm'])->name('instructor.assignments.submissions.grade');
         Route::post('/instructor/courses/{course}/assignments/{assignment}/submissions/{submission}/grade', [InstructorAssignmentController::class, 'grade'])->name('instructor.assignments.submissions.grade.store');
 
@@ -304,7 +305,7 @@ Route::middleware('auth')->group(function () {
         Route::post('/student/quiz-attempts/{attempt}/submit', [StudentQuizController::class, 'submit'])->name('student.quizzes.submit');
         Route::get('/student/quiz-attempts/{attempt}/result', [StudentQuizController::class, 'result'])->name('student.quizzes.result');
 
-        // Assignments
+        // Student Assignments
         Route::get('/student/assignments/{assignment}', [StudentAssignmentController::class, 'show'])->name('student.assignments.show');
         Route::get('/student/assignments/{assignment}/submit', [StudentAssignmentController::class, 'submitForm'])->name('student.assignments.submit-form');
         Route::post('/student/assignments/{assignment}/submit', [StudentAssignmentController::class, 'submit'])->name('student.assignments.submit');

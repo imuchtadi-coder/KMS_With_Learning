@@ -19,8 +19,13 @@ class SecurityHeaders
         //     'X-Frame-Options',
         //     'DENY'
         // );
-        $isMaterialPreview = $request->routeIs('student.materials.preview');
-        if (!$isMaterialPreview) {
+        $isIframePreview =
+            $request->routeIs('student.materials.preview') ||
+            $request->routeIs('instructor.assignments.submissions.preview');
+
+        if ($isIframePreview) {
+            $response->headers->set('X-Frame-Options', 'SAMEORIGIN');
+        } else {
             $response->headers->set('X-Frame-Options', 'DENY');
         }
 
@@ -96,7 +101,7 @@ class SecurityHeaders
 
             "object-src 'none'",
 
-            "frame-ancestors " . ($isMaterialPreview ? "'self'" : "'none'"),
+            "frame-ancestors " . ($isIframePreview ? "'self'" : "'none'"),
 
             "form-action 'self'",
 

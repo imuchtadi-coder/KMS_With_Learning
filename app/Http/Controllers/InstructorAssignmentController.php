@@ -12,6 +12,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
 class InstructorAssignmentController extends Controller
 {
@@ -296,5 +297,47 @@ class InstructorAssignmentController extends Controller
             $percentage >= 60 => 'D',
             default => 'E',
         };
+    }
+
+    public function previewSubmission( Course $course, Assignment $assignment, AssignmentSubmission $submission ): BinaryFileResponse 
+    {
+        $user = auth()->user();
+
+        if (
+            ! ($user->id === $course->created_by && $user->tenant_id === $course->tenant_id) &&
+            ! ($user->hasRole('tenant_admin') && $user->tenant_id === $course->tenant_id)
+        ) {
+            abort(403);
+        }
+
+        if ($assignment->course_id !== $course->id) {
+            abort(404);
+        }
+
+        if ($submission->assignment_id !== $assignment->id) {
+            abort(404);
+        }
+
+        if (
+            ! $submission->file_path ||
+            ! Storage::disk('local')->exists($submission->file_path)
+        ) {
+            abort(404, 'File not found.');
+        }
+
+        $path = Storage::disk('local')->path($submission->file_path);
+
+        return new BinaryFileResponse(
+            $path,
+            200,
+            [
+                'Content-Type' => 'application/pdf',
+                'Content-Disposition' => 'inline; filename="submission.pdf"',
+                'Content-Length' => filesize($path),
+                'Cache-Control' => 'private, max-age=0, must-revalidate',
+                'Pragma' => 'public',
+                'X-Content-Type-Options' => 'nosniff',
+            ]
+        );
     }
 }
