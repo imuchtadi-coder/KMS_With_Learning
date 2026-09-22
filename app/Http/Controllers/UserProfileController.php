@@ -23,8 +23,20 @@ class UserProfileController extends Controller
      */
     public function edit()
     {
-        $user = Auth::user();
-        return Inertia::render('Profile/Edit', compact('user'));
+        $user = Auth::user()->load('tenant');
+
+        return Inertia::render('Profile/Edit', [
+            'user' => [
+                'id' => $user->id,
+                'name' => $user->name,
+                'email' => $user->email,
+                'phone' => $user->phone,
+                'birthday' => $user->birthday?->format('Y-m-d'),
+                'department' => $user->department,
+                'address' => $user->address,
+                'tenant' => $user->tenant,
+            ],
+        ]);
     }
 
     /**

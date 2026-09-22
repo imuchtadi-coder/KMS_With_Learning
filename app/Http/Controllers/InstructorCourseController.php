@@ -28,7 +28,7 @@ class InstructorCourseController extends Controller
         $draftCourses = Course::where('created_by', $user->id)->where('published', false)->count();
         $totalStudents = Enrollment::whereHas('course', fn($q) => $q->where('created_by', $user->id))->distinct('user_id')->count('user_id');
 
-        $recentCourses = Course::where('created_by', $user->id)->with('tenant')->latest()->take(5)->get();
+        $recentCourses = Course::where('created_by', $user->id)->with('tenant')->latest()->paginate(6)->withQueryString();
 
         return Inertia::render('Instructor/Dashboard', compact('totalCourses', 'publishedCourses', 'draftCourses', 'totalStudents', 'recentCourses'));
     }

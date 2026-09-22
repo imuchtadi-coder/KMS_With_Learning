@@ -40,24 +40,36 @@ class DiscussionController extends Controller
     {
         $this->authorize('create', Discussion::class);
 
+        $courses = $this->accessibleCourses($request)
+            ->with([
+                'sections.lessons',
+            ])
+            ->orderBy('title')
+            ->get();
+
         $course = null;
+
         if ($request->filled('course_id')) {
-            $course = Course::where('tenant_id', $request->user()->tenant_id)
-                ->findOrFail($request->course_id);
+            $course = $courses->firstWhere(
+                'id',
+                (int) $request->course_id
+            );
+
+            abort_unless($course, 404);
         }
 
         $lesson = null;
-        if ($request->filled('lesson_id')) {
-            $lesson = Lesson::whereHas('section.course', fn ($query) => $query
-                ->where('tenant_id', $request->user()->tenant_id))
-                ->findOrFail($request->lesson_id);
 
-            if ($course && $lesson->section->course_id !== $course->id) {
-                abort(404);
-            }
+        if ($request->filled('lesson_id')) {
+            abort_unless($course, 404);
+
+            $lesson = Lesson::whereHas('section', function ($query) use ($course) {
+                $query->where('course_id', $course->id);
+            })->findOrFail($request->lesson_id);
         }
 
         return Inertia::render('Discussions/Create', [
+            'courses' => $courses,
             'course' => $course,
             'lesson' => $lesson,
         ]);
@@ -69,28 +81,32 @@ class DiscussionController extends Controller
 
         $validated = $request->validate([
             'course_id' => ['required', 'integer'],
+            'lesson_id' => ['nullable', 'integer'],
             'title' => ['required', 'string', 'max:255'],
             'content' => ['required', 'string'],
-            'lesson_id' => ['nullable', 'integer'],
         ]);
 
-        $course = Course::where('tenant_id', $request->user()->tenant_id)
+        $course = $this->accessibleCourses($request)
             ->findOrFail($validated['course_id']);
 
-        if (isset($validated['lesson_id'])) {
-            Lesson::whereHas('section', fn ($query) => $query->where('course_id', $course->id))
-                ->findOrFail($validated['lesson_id']);
+        $lessonId = $validated['lesson_id'] ?? null;
+
+        if ($lessonId !== null) {
+            Lesson::whereHas('section', function ($query) use ($course) {
+                $query->where('course_id', $course->id);
+            })->findOrFail($lessonId);
         }
 
         $discussion = Discussion::create([
-            'course_id' => $validated['course_id'],
-            'lesson_id' => $validated['lesson_id'] ?? null,
+            'course_id' => $course->id,
+            'lesson_id' => $lessonId,
             'title' => $validated['title'],
             'content' => $validated['content'],
             'created_by' => auth()->id(),
         ]);
 
-        return redirect()->route('discussions.show', $discussion)
+        return redirect()
+            ->route('discussions.show', $discussion)
             ->with('success', 'Discussion created successfully.');
     }
 
@@ -170,5 +186,28 @@ class DiscussionController extends Controller
             'discussions' => $discussions,
             'lesson' => $lesson,
         ]);
+    }
+
+    private function accessibleCourses(Request $request)
+    {
+        $user = $request->user();
+
+        if ($user->hasRole('instructor')) {
+            return Course::query()
+                ->where('tenant_id', $user->tenant_id)
+                ->where('created_by', $user->id);
+        }
+
+        if ($user->hasRole('student')) {
+            return Course::query()
+                ->where('tenant_id', $user->tenant_id)
+                ->whereHas('enrollments', function ($query) use ($user) {
+                    $query
+                        ->where('user_id', $user->id)
+                        ->where('status', 'active');
+                });
+        }
+
+        abort(403);
     }
 }

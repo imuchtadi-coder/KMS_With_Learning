@@ -17,8 +17,22 @@ defineProps({
 
 <template>
   <div>
-    <h4 class="text-h4 font-weight-bold mb-1">Course Analytics</h4>
-    <p class="text-body-1 text-medium-emphasis mb-6">{{ course.title }}</p>
+    <div div class="d-flex align-center justify-space-between mb-6">
+      <div>
+        <h4 class="text-h4 font-weight-bold mb-1">Course Analytics</h4>
+        <p class="text-body-1 text-medium-emphasis mb-6">{{ course.title }}</p>
+      </div>
+      <div>
+        <VBtn
+          color="secondary"
+          variant="elevated"
+          prepend-icon="mdi-arrow-left"
+          :href="route('instructor.courses.update', course.id)"
+        >
+          Back to Course
+        </VBtn>
+      </div>
+    </div>
 
     <VRow class="mb-6">
       <VCol cols="6" lg="3"><VCard flat border class="pa-4"><div class="text-caption text-medium-emphasis">Avg Score</div><div class="text-h3 font-weight-bold">{{ overallAvgScore }}%</div></VCard></VCol>

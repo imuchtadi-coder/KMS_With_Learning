@@ -1,10 +1,16 @@
 <script setup>
-import { useForm } from '@inertiajs/vue3'
+import { Link, useForm, usePage } from '@inertiajs/vue3'
 
 const props = defineProps({
   discussion: { type: Object, required: true },
   course: { type: Object, default: null },
 })
+
+const page = usePage()
+
+const roles = page.props.auth?.user?.roles ?? []
+
+const isAdmin = roles.includes('tenant_admin')
 
 const replyForm = useForm({ content: '' })
 
@@ -18,44 +24,135 @@ const submitReply = () => {
 
 <template>
   <div>
+    <!-- Back Button -->
+    <div class="mb-4">
+      <Link
+        href="/discussions"
+        class="text-decoration-none"
+      >
+        <VBtn
+          variant="tonal"
+          prepend-icon="ri-arrow-left-line"
+        >
+          Kembali ke Discussions
+        </VBtn>
+      </Link>
+    </div>
+
     <VCard flat border class="pa-6 mb-6">
       <div class="d-flex align-center ga-3 mb-4">
-        <VAvatar size="40" :color="discussion.creator?.avatar_url ? undefined : 'primary'" variant="tonal">
-          <VImg v-if="discussion.creator?.avatar_url" :src="discussion.creator.avatar_url" />
-          <span v-else class="text-uppercase font-weight-bold">{{ discussion.creator?.name?.[0] }}</span>
+        <VAvatar
+          size="40"
+          :color="discussion.creator?.avatar_url ? undefined : 'primary'"
+          variant="tonal"
+        >
+          <VImg
+            v-if="discussion.creator?.avatar_url"
+            :src="discussion.creator.avatar_url"
+          />
+          <span v-else class="text-uppercase font-weight-bold">
+            {{ discussion.creator?.name?.[0] }}
+          </span>
         </VAvatar>
+
         <div>
-          <div class="font-weight-semibold">{{ discussion.creator?.name }}</div>
-          <div class="text-caption text-medium-emphasis">{{ new Date(discussion.created_at).toLocaleString() }}</div>
+          <div class="font-weight-semibold">
+            {{ discussion.creator?.name }}
+          </div>
+          <div class="text-caption text-medium-emphasis">
+            {{ new Date(discussion.created_at).toLocaleString() }}
+          </div>
         </div>
-        <VChip v-if="discussion.is_pinned" color="primary" size="x-small" variant="tonal" label class="ml-auto">Pinned</VChip>
+
+        <VChip
+          v-if="discussion.is_pinned"
+          color="primary"
+          size="x-small"
+          variant="tonal"
+          label
+          class="ml-auto"
+        >
+          Pinned
+        </VChip>
       </div>
-      <h4 class="text-h4 font-weight-bold mb-3">{{ discussion.title }}</h4>
-      <div class="text-body-1" style="white-space: pre-wrap;">{{ discussion.content }}</div>
+
+      <h4 class="text-h4 font-weight-bold mb-3">
+        {{ discussion.title }}
+      </h4>
+
+      <div class="text-body-1" style="white-space: pre-wrap;">
+        {{ discussion.content }}
+      </div>
     </VCard>
 
     <VCard flat border class="pa-6 mb-6">
-      <h5 class="text-h5 font-weight-bold mb-4">Replies ({{ discussion.replies?.length ?? 0 }})</h5>
-      <div v-if="discussion.replies?.length" class="d-flex flex-column ga-4">
-        <div v-for="reply in discussion.replies" :key="reply.id" class="d-flex ga-3">
-          <VAvatar size="36" :color="reply.creator?.avatar_url ? undefined : 'secondary'" variant="tonal">
-            <VImg v-if="reply.creator?.avatar_url" :src="reply.creator.avatar_url" />
-            <span v-else class="text-uppercase font-weight-bold">{{ reply.creator?.name?.[0] }}</span>
+      <h5 class="text-h5 font-weight-bold mb-4">
+        Replies ({{ discussion.replies?.length ?? 0 }})
+      </h5>
+
+      <div
+        v-if="discussion.replies?.length"
+        class="d-flex flex-column ga-4"
+      >
+        <div
+          v-for="reply in discussion.replies"
+          :key="reply.id"
+          class="d-flex ga-3"
+        >
+          <VAvatar
+            size="36"
+            :color="reply.creator?.avatar_url ? undefined : 'secondary'"
+            variant="tonal"
+          >
+            <VImg
+              v-if="reply.creator?.avatar_url"
+              :src="reply.creator.avatar_url"
+            />
+            <span v-else class="text-uppercase font-weight-bold">
+              {{ reply.creator?.name?.[0] }}
+            </span>
           </VAvatar>
+
           <div class="flex-grow-1">
             <div class="d-flex align-center ga-2">
-              <span class="font-weight-semibold text-body-2">{{ reply.creator?.name }}</span>
-              <span class="text-caption text-medium-emphasis">{{ new Date(reply.created_at).toLocaleString() }}</span>
+              <span class="font-weight-semibold text-body-2">
+                {{ reply.creator?.name }}
+              </span>
+
+              <span class="text-caption text-medium-emphasis">
+                {{ new Date(reply.created_at).toLocaleString() }}
+              </span>
             </div>
-            <div class="text-body-2 mt-1" style="white-space: pre-wrap;">{{ reply.content }}</div>
+
+            <div
+              class="text-body-2 mt-1"
+              style="white-space: pre-wrap;"
+            >
+              {{ reply.content }}
+            </div>
           </div>
         </div>
       </div>
-      <p v-else class="text-body-2 text-medium-emphasis text-center py-4">No replies yet. Be the first to reply!</p>
+
+      <p
+        v-else
+        class="text-body-2 text-medium-emphasis text-center py-4"
+      >
+        No replies yet. Be the first to reply!
+      </p>
     </VCard>
 
-    <VCard flat border class="pa-6">
-      <h5 class="text-h5 font-weight-bold mb-3">Post a Reply</h5>
+    <!-- Post Reply hanya untuk instructor dan student -->
+    <VCard
+      v-if="!isAdmin"
+      flat
+      border
+      class="pa-6"
+    >
+      <h5 class="text-h5 font-weight-bold mb-3">
+        Post a Reply
+      </h5>
+
       <VForm @submit.prevent="submitReply">
         <VTextarea
           v-model="replyForm.content"
@@ -67,6 +164,7 @@ const submitReply = () => {
           hide-details="auto"
           class="mb-3"
         />
+
         <VBtn
           type="submit"
           color="primary"

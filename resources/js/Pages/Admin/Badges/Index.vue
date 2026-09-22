@@ -2,8 +2,21 @@
 import { router } from '@inertiajs/vue3'
 
 defineProps({
-  badges: { type: Object, default: () => ({ data: [] }) },
+  badges: {
+    type: Object,
+    default: () => ({ data: [] }),
+  },
 })
+
+const deleteBadge = badge => {
+  if (!window.confirm(`Delete badge "${badge.name}"?`)) {
+    return
+  }
+
+  router.delete(
+    route('admin.badges.destroy', badge.id)
+  )
+}
 </script>
 
 <template>
@@ -52,7 +65,7 @@ defineProps({
                 <VBtn icon size="x-small" color="warning" variant="tonal" :href="route('admin.badges.edit', badge.id)">
                   <VIcon icon="mdi-pencil" size="16" />
                 </VBtn>
-                <VBtn icon size="x-small" color="error" variant="tonal" @click="window.confirm('Delete this badge?') && router.delete(route('admin.badges.destroy', badge.id))">
+                <VBtn icon size="x-small" color="error" variant="tonal" @click="deleteBadge(badge)">
                   <VIcon icon="mdi-delete" size="16" />
                 </VBtn>
               </div>

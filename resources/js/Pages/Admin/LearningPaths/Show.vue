@@ -35,18 +35,18 @@ const reorderCourse = (courseId, direction) => {
         <h4 class="text-h4 font-weight-bold mb-1">{{ learningPath.title }}</h4>
         <p class="text-body-2 text-medium-emphasis">
           <VChip
-            :color="learningPath.published ? 'success' : 'warning'"
+            :color="learningPath.published_at ? 'success' : 'warning'"
             size="x-small"
             variant="tonal"
             label
           >
-            {{ learningPath.published ? 'Published' : 'Draft' }}
+            {{ learningPath.published_at ? 'Published' : 'Draft' }}
           </VChip>
         </p>
       </div>
       <div class="d-flex ga-2">
         <VBtn
-          v-if="!learningPath.published"
+          v-if="!learningPath.published_at"
           color="success"
           variant="tonal"
           prepend-icon="mdi-check"

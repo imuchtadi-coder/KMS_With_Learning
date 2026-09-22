@@ -17,10 +17,23 @@ function updateGrade(studentId, itemId, value) {
 </script>
 
 <template>
+  <div class="d-flex align-center justify-space-between mb-6">
+    <div>
+      <h4 class="text-h4 font-weight-bold mb-1">Gradebook</h4>
+      <p class="text-body-1 text-medium-emphasis mb-6">{{ course.title }}</p>
+    </div>
+    <div>
+      <VBtn
+        color="secondary"
+        variant="elevated"
+        prepend-icon="mdi-Arrow-left"
+        :href="route('instructor.courses.update', course.id)"
+      >
+        Back to Course
+      </VBtn>
+    </div>
+  </div>
   <div>
-    <h4 class="text-h4 font-weight-bold mb-1">Gradebook</h4>
-    <p class="text-body-1 text-medium-emphasis mb-6">{{ course.title }}</p>
-
     <VCard flat border class="overflow-auto">
       <VTable class="text-no-wrap">
         <thead>

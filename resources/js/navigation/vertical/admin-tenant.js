@@ -55,13 +55,13 @@ export default [
     action: 'tenant_admin',
     subject: 'role',
   },
-  {
-    title: 'Bulk Ops',
-    icon: { icon: 'tabler-upload' },
-    href: '/admin/bulk/import-users',
-    action: 'tenant_admin',
-    subject: 'role',
-  },
+  // {
+  //   title: 'Bulk Ops',
+  //   icon: { icon: 'tabler-upload' },
+  //   href: '/admin/bulk/import-users',
+  //   action: 'tenant_admin',
+  //   subject: 'role',
+  // },
   {
     title: 'Mail Settings',
     icon: { icon: 'tabler-mail' },

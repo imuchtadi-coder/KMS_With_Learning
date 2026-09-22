@@ -23,9 +23,25 @@ function destroy(question) {
         <h4 class="text-h4 font-weight-bold mb-1">Question Bank</h4>
         <p class="text-body-1 text-medium-emphasis">{{ course.title }}</p>
       </div>
-      <VBtn color="primary" variant="elevated" prepend-icon="mdi-plus" :href="route('instructor.questions.create', course.id)">
-        Add Question
-      </VBtn>
+      <div class="d-flex align-center ga-2">
+        <VBtn
+          color="secondary"
+          variant="tonal"
+          prepend-icon="mdi-arrow-left"
+          :href="route('instructor.courses.update', course.id)"
+        >
+          Back to Course
+        </VBtn>
+
+        <VBtn
+          color="primary"
+          variant="elevated"
+          prepend-icon="mdi-plus"
+          :href="route('instructor.questions.create', course.id)"
+        >
+          Add Question
+        </VBtn>
+      </div>
     </div>
 
     <!-- <VCard v-if="questions.length" flat border> -->

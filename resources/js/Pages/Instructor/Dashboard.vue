@@ -1,10 +1,12 @@
 <script setup>
+import { router } from '@inertiajs/vue3'
+
 defineProps({
   totalCourses: { type: Number, default: 0 },
   publishedCourses: { type: Number, default: 0 },
   draftCourses: { type: Number, default: 0 },
   totalStudents: { type: Number, default: 0 },
-  recentCourses: { type: Array, default: () => [] },
+  recentCourses: { type: Object, default: () => ({ data: [], current_page: 1,last_page: 1,total: 0, }) },
 })
 </script>
 
@@ -78,8 +80,8 @@ defineProps({
         </VBtn>
       </div>
 
-      <VRow v-if="recentCourses.length">
-        <VCol v-for="course in recentCourses" :key="course.id" cols="12" md="6" lg="4">
+      <VRow v-if="recentCourses.data.length">
+        <VCol v-for="course in recentCourses.data" :key="course.id" cols="12" md="6" lg="4">
           <VCard flat border hover>
             <div class="position-relative overflow-hidden" style="height: 128px;">
               <img v-if="course.thumbnail" :src="course.thumbnail" class="w-100 h-100" style="object-fit: cover; object-position: center;" />
@@ -114,6 +116,21 @@ defineProps({
         <p class="text-body-2 text-medium-emphasis mb-4">Create your first course to get started teaching students</p>
         <VBtn color="primary" variant="elevated" :href="route('instructor.courses.create')">Create Your First Course</VBtn>
       </VCard>
+    </div>
+    <div
+        v-if="recentCourses.last_page > 1"
+        class="d-flex justify-center mt-6"
+    >
+        <VPagination
+            :model-value="recentCourses.current_page"
+            :length="recentCourses.last_page"
+            :total-visible="5"
+            @update:model-value="(page) => router.get(
+                route('instructor.dashboard'),
+                { page },
+                { preserveState: true, preserveScroll: true }
+            )"
+        />
     </div>
   </div>
 </template>

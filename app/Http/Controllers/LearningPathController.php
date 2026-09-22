@@ -64,7 +64,7 @@ class LearningPathController extends Controller
             'description' => $validated['description'] ?? null,
         ]);
 
-        return redirect()->route('admin.learning-paths.edit', $path)
+        return redirect()->route('admin.learning-paths.show', $path)
             ->with('success', 'Learning Path created successfully!');
     }
 

@@ -1,11 +1,11 @@
 export default [
-  {
-    title: 'Teaching',
-    icon: { icon: 'tabler-school' },
-    href: '/instructor',
-    action: 'instructor',
-    subject: 'role',
-  },
+  // {
+  //   title: 'Teaching',
+  //   icon: { icon: 'tabler-school' },
+  //   href: '/instructor',
+  //   action: 'instructor',
+  //   subject: 'role',
+  // },
   {
     title: 'My Courses',
     icon: { icon: 'tabler-books' },

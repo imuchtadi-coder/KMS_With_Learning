@@ -42,15 +42,24 @@ function destroy(lc) {
           {{ course.title }}
         </p>
       </div>
-
-      <VBtn
-        color="primary"
-        variant="elevated"
-        prepend-icon="mdi-plus"
-        :href="route('instructor.live-classes.create', course.id)"
-      >
-        Create Session
-      </VBtn>
+      <div class="d-flex align-center ga-2">
+        <VBtn
+          color="secondary"
+          variant="tonal"
+          prepend-icon="mdi-arrow-left"
+          :href="route('instructor.courses.update', course.id)"
+        >
+          Back to Course
+        </VBtn>
+        <VBtn
+          color="primary"
+          variant="elevated"
+          prepend-icon="mdi-plus"
+          :href="route('instructor.live-classes.create', course.id)"
+        >
+          Create Session
+        </VBtn>
+      </div>
     </div>
 
     <VRow>

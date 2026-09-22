@@ -11,12 +11,12 @@ const page = usePage()
 const errors = computed(() => page.props.errors || {})
 
 const profileForm = useForm({
-  name: props.user.name,
-  email: props.user.email,
-  phone: props.user.phone || '',
-  birthday: props.user.birthday || '',
-  department: props.user.department || '',
-  address: props.user.address || '',
+  name: props.user?.name,
+  email: props.user?.email,
+  phone: props.user?.phone || '',
+  birthday: props.user?.birthday || '',
+  department: props.user?.department || '',
+  address: props.user?.address || '',
 })
 
 const passwordForm = useForm({

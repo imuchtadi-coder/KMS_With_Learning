@@ -26,6 +26,12 @@ const canPinDiscussion = computed(() => {
   return roles.includes('admin') || roles.includes('instructor')
 })
 
+const isInstructor = computed(() => {
+  const roles = page.props.auth?.user?.roles ?? []
+
+  return roles.includes('instructor')
+})
+
 const togglePin = (discussion) => { 
   router.post( route('discussions.pin', discussion.id), {}, { preserveScroll: true, } ) 
 }
@@ -48,6 +54,15 @@ const togglePin = (discussion) => {
           hide-details
           style="max-width: 280px;"
         />
+        <VBtn
+          v-if="isInstructor && course"
+          variant="tonal"
+          prepend-icon="mdi-arrow-left"
+          @click="router.visit(`/instructor/courses/${course.id}`)"
+        >
+          Back
+        </VBtn>
+
         <VBtn
           color="primary"
           variant="elevated"

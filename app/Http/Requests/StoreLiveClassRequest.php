@@ -17,7 +17,7 @@ class StoreLiveClassRequest extends FormRequest
             'title' => ['required', 'string', 'max:255'],
             'description' => ['nullable', 'string'],
             'section_id' => ['nullable', 'exists:sections,id'],
-            'provider' => ['required', 'in:jitsi,google_meet,zoom,other'],
+            'provider' => ['required', 'in:jitsi,google_meet,zoom,microsoft_teams,other'],
             'meeting_url' => ['nullable', 'url'],
             'meeting_id' => ['nullable', 'string', 'max:255'],
             'password' => ['nullable', 'string', 'max:255'],
