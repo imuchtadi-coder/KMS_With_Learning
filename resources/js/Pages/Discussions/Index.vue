@@ -32,6 +32,12 @@ const isInstructor = computed(() => {
   return roles.includes('instructor')
 })
 
+const canCreateDiscussion = computed(() => {
+  const roles = page.props.auth?.user?.roles ?? []
+
+  return !roles.includes('tenant_admin')
+})
+
 const togglePin = (discussion) => { 
   router.post( route('discussions.pin', discussion.id), {}, { preserveScroll: true, } ) 
 }
@@ -52,7 +58,7 @@ const togglePin = (discussion) => {
           variant="outlined"
           density="default"
           hide-details
-          style="max-width: 280px;"
+          style="max-width: 300px;"
         />
         <VBtn
           v-if="isInstructor && course"
@@ -63,10 +69,11 @@ const togglePin = (discussion) => {
           Back
         </VBtn>
 
-        <VBtn
-          color="primary"
-          variant="elevated"
-          prepend-icon="mdi-plus"
+        <VBtn 
+          v-if="canCreateDiscussion"
+          color="primary" 
+          variant="elevated" 
+          prepend-icon="mdi-plus" 
           :href="route('discussions.create', { course_id: course?.id })"
         >
           New Discussion
@@ -132,6 +139,7 @@ const togglePin = (discussion) => {
       <p class="text-h6 text-medium-emphasis">No discussions yet.</p>
       <p class="text-body-2 text-disabled mb-4">Start a new discussion to engage with your peers.</p>
       <VBtn
+        v-if="canCreateDiscussion"
         color="primary"
         variant="elevated"
         prepend-icon="mdi-plus"

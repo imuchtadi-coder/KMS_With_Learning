@@ -16,6 +16,7 @@ class QuizAttempt extends Model
         'started_at',
         'finished_at',
         'status',
+        'question_order',
         'tab_switch_count',
         'ip_address',
     ];
@@ -26,6 +27,7 @@ class QuizAttempt extends Model
         'started_at' => 'datetime',
         'finished_at' => 'datetime',
         'tab_switch_count' => 'integer',
+        'question_order' => 'array',
     ];
 
     public function quiz(): BelongsTo

@@ -31,10 +31,10 @@ const submitReply = () => {
         class="text-decoration-none"
       >
         <VBtn
-          variant="tonal"
-          prepend-icon="ri-arrow-left-line"
+          variant="elevated"
+          prepend-icon="mdi-arrow-left"
         >
-          Kembali ke Discussions
+          Back to Discussions
         </VBtn>
       </Link>
     </div>

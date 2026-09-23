@@ -89,11 +89,20 @@ class StudentQuizController extends Controller
             return redirect()->route('student.quizzes.take', $existingAttempt);
         }
 
+        $questions = $quiz->questions;
+
+        $questionOrder = $questions->pluck('id')->values()->all();
+
+        if ($quiz->shuffle_questions) {
+            shuffle($questionOrder);
+        }
+
         $attempt = QuizAttempt::create([
             'quiz_id' => $quiz->id,
             'user_id' => $user->id,
             'started_at' => now(),
             'status' => 'in_progress',
+            'question_order' => $questionOrder,
             'ip_address' => request()->ip(),
         ]);
 
@@ -103,32 +112,123 @@ class StudentQuizController extends Controller
     public function take(QuizAttempt $attempt)
     {
         $user = auth()->user();
-        if ($attempt->user_id !== $user->id) abort(403);
+
+        if ($attempt->user_id !== $user->id) {
+            abort(403);
+        }
+
         if ($attempt->status !== 'in_progress') {
             return redirect()->route('student.quizzes.result', $attempt);
         }
 
         $attempt->load(['quiz.questions', 'quiz.section']);
 
+        $questions = $attempt->quiz->questions;
+
+        if (empty($attempt->question_order)) {
+            // Compatibility untuk attempt lama yang dibuat
+            // sebelum fitur question_order ditambahkan.
+            $questionOrder = $questions->pluck('id')->values()->all();
+
+            if ($attempt->quiz->shuffle_questions) {
+                shuffle($questionOrder);
+            }
+
+            $attempt->update([
+                'question_order' => $questionOrder,
+            ]);
+
+            $attempt->refresh();
+            $attempt->load(['quiz.questions', 'quiz.section']);
+
+            $questions = $attempt->quiz->questions;
+        } else {
+            $questionOrder = $attempt->question_order;
+        }
+
+        $orderedQuestions = collect($questionOrder)
+            ->map(function ($questionId) use ($questions) {
+                return $questions->firstWhere('id', $questionId);
+            })
+            ->filter()
+            ->values();
+
+        /*
+        |--------------------------------------------------------------------------
+        | Security: jangan kirim jawaban benar ke browser student
+        |--------------------------------------------------------------------------
+        */
+        $orderedQuestions->each(function ($question) {
+            // Jangan kirim correct_answer ke frontend.
+            $question->makeHidden([
+                'correct_answer',
+            ]);
+
+            // Hanya kirim teks pilihan.
+            $options = $question->options;
+
+            if (is_array($options)) {
+                $question->setAttribute(
+                    'options',
+                    collect($options)
+                        ->map(function ($option) {
+                            if (is_array($option)) {
+                                return $option['text'] ?? '';
+                            }
+
+                            if (is_object($option)) {
+                                return $option->text ?? '';
+                            }
+
+                            return $option;
+                        })
+                        ->values()
+                        ->all()
+                );
+            }
+        });
+
+        $attempt->quiz->setRelation('questions', $orderedQuestions);
+
         if ($attempt->quiz->time_limit) {
             $elapsed = now()->diffInMinutes($attempt->started_at);
+
             if ($elapsed >= $attempt->quiz->time_limit) {
                 $this->autoSubmit($attempt);
-                return redirect()->route('student.quizzes.result', $attempt);
+
+                return redirect()->route(
+                    'student.quizzes.result',
+                    $attempt
+                );
             }
         }
 
         $remaining = null;
+
         if ($attempt->quiz->time_limit) {
-            $remaining = ($attempt->quiz->time_limit * 60) - now()->diffInSeconds($attempt->started_at);
-            if ($remaining < 0) $remaining = 0;
+            $remaining =
+                ($attempt->quiz->time_limit * 60)
+                - now()->diffInSeconds($attempt->started_at);
+
+            if ($remaining < 0) {
+                $remaining = 0;
+            }
         }
 
         $preventCopyPaste = $attempt->quiz->prevent_copy_paste;
         $randomizeOptions = $attempt->quiz->randomize_options;
 
-        return inertia('Student/Quizzes/Take', compact('attempt', 'remaining', 'preventCopyPaste', 'randomizeOptions'));
+        return inertia(
+            'Student/Quizzes/Take',
+            compact(
+                'attempt',
+                'remaining',
+                'preventCopyPaste',
+                'randomizeOptions'
+            )
+        );
     }
+    
 
     public function submit(Request $request, QuizAttempt $attempt)
     {

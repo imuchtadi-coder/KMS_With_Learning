@@ -20,9 +20,22 @@ const instructor = computed(() => course.value.instructor || {})
     <!-- Course Header -->
     <div class="mb-6">
       <h2 class="text-h4 font-weight-bold mb-1">{{ course.title }}</h2>
-      <div class="d-flex align-center ga-4">
-        <span class="text-body-2 text-medium-emphasis">by <strong>{{ instructor.name || 'Unknown' }}</strong></span>
-        <VChip color="primary" size="small" variant="flat">{{ course.level?.charAt(0).toUpperCase() + course.level?.slice(1) }}</VChip>
+      <div class="d-flex align-center justify-space-between mb-6 flex-wrap ga-4">
+        <div class="d-flex align-center ga-4">
+          <span class="text-body-2 text-medium-emphasis">by <strong>{{ instructor.name || 'Unknown' }}</strong></span>
+          <VChip color="primary" size="small" variant="flat">{{ course.level?.charAt(0).toUpperCase() + course.level?.slice(1) }}</VChip>
+        </div>
+        <div>
+          <VBtn
+            color="secondary"
+            variant="tonal"
+            size="small"
+            prepend-icon="mdi-arrow-left"
+            :href="route('student.enrollments', course.id)"
+          >
+            Back
+          </VBtn>
+        </div>
       </div>
     </div>
 
@@ -75,6 +88,7 @@ const instructor = computed(() => course.value.instructor || {})
                 </a>
               </div>
             </template>
+            
           </div>
           <VDivider />
           <VCardText>
@@ -132,7 +146,7 @@ const instructor = computed(() => course.value.instructor || {})
               </div>
             </VCard>
 
-            <VBtn v-if="!enrollment.completed_at" color="success" variant="elevated" prepend-icon="mdi-check" class="mb-6">Mark as Complete</VBtn>
+            <!-- <VBtn v-if="!enrollment.completed_at" color="success" variant="elevated" prepend-icon="mdi-check" class="mb-6">Mark as Complete</VBtn> -->
 
             <VDivider class="mb-4" />
             <div class="d-flex ga-3">

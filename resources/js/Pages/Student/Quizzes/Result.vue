@@ -7,6 +7,7 @@ const props = defineProps({
 
 const passed = computed(() => {
   if (props.attempt.status === 'timeout') return false
+
   return props.attempt.score >= props.attempt.quiz.passing_grade
 })
 
@@ -17,26 +18,45 @@ const showReview = computed(() => {
 const statusLabel = computed(() => {
   if (props.attempt.status === 'timeout') return 'Timeout'
   if (props.attempt.status === 'completed') return 'Completed'
+
   return props.attempt.status
 })
 
-function statusIcon() {
-  if (props.attempt.status === 'timeout') return 'mdi-clock-alert-outline'
-  if (passed.value) return 'mdi-check-circle-outline'
+const statusIcon = computed(() => {
+  if (props.attempt.status === 'timeout') {
+    return 'mdi-clock-alert-outline'
+  }
+
+  if (passed.value) {
+    return 'mdi-check-circle-outline'
+  }
+
   return 'mdi-close-circle-outline'
-}
+})
 
-function statusColor() {
-  if (props.attempt.status === 'timeout') return 'warning'
-  if (passed.value) return 'success'
+const statusColor = computed(() => {
+  if (props.attempt.status === 'timeout') {
+    return 'warning'
+  }
+
+  if (passed.value) {
+    return 'success'
+  }
+
   return 'error'
-}
+})
 
-function statusTitle() {
-  if (props.attempt.status === 'timeout') return "Time's Up!"
-  if (passed.value) return 'Congratulations! You Passed!'
+const statusTitle = computed(() => {
+  if (props.attempt.status === 'timeout') {
+    return "Time's Up!"
+  }
+
+  if (passed.value) {
+    return 'Congratulations! You Passed!'
+  }
+
   return 'Unfortunately, You Did Not Pass'
-}
+})
 </script>
 
 <template>
@@ -50,17 +70,22 @@ function statusTitle() {
     </nav>
 
     <VCard flat border class="pa-8 text-center mb-6">
-      <VAvatar
-        :color="statusColor"
-        variant="tonal"
-        size="80"
-        class="mb-6"
-      >
-        <VIcon :icon="statusIcon" size="40" />
-      </VAvatar>
+    <VAvatar
+      :color="statusColor"
+      variant="tonal"
+      size="80"
+      class="mb-6"
+    >
+      <VIcon :icon="statusIcon" size="40" />
+    </VAvatar>
 
-      <h4 class="text-h4 font-weight-bold mb-2">{{ statusTitle }}</h4>
-      <p class="text-body-1 text-medium-emphasis mb-6">{{ attempt.quiz.title }}</p>
+    <h4 class="text-h4 font-weight-bold mb-2">
+      {{ statusTitle }}
+    </h4>
+
+    <p class="text-body-1 text-medium-emphasis mb-6">
+      {{ attempt.quiz.title }}
+    </p>
 
       <VRow class="max-w-md mx-auto mb-6" dense>
         <VCol cols="4">

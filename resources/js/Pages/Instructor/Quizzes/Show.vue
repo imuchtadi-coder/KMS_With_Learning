@@ -25,6 +25,15 @@ function unpublish() {
         <VBtn v-if="!quiz.published" color="success" variant="tonal" size="small" @click="publish">Publish</VBtn>
         <VBtn v-else color="warning" variant="tonal" size="small" @click="unpublish">Unpublish</VBtn>
         <VBtn variant="outlined" size="small" :href="route('instructor.quizzes.edit', [course.id, quiz.id])">Edit</VBtn>
+        <VBtn
+          color="secondary"
+          variant="tonal"
+          size="small"
+          prepend-icon="mdi-arrow-left"
+          :href="route('instructor.quizzes.index', course.id)"
+        >
+          Back
+        </VBtn>
       </div>
     </div>
 

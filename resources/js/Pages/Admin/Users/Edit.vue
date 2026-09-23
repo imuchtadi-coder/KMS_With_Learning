@@ -1,7 +1,7 @@
 <script setup>
-import { useForm, router } from '@inertiajs/vue3'
+import { useForm } from '@inertiajs/vue3'
 
-defineProps({
+const props = defineProps({
   user: { type: Object, required: true },
   roles: { type: Array, default: () => [] },
   tenants: { type: Array, default: () => [] },
@@ -26,13 +26,15 @@ const init = (user) => {
   form.role = user.roles?.[0]?.name || ''
   form.tenant_id = user.tenant_id || ''
   form.phone = user.phone || ''
-  form.birthday = user.birthday || ''
+  form.birthday = user.birthday ? user.birthday.substring(0, 10) : ''
   form.department = user.department || ''
   form.address = user.address || ''
 }
 
+init(props.user)
+
 const submit = () => {
-  form.put(route('admin.users.update', user.id))
+  form.put(route('admin.users.update', props.user.id))
 }
 </script>
 
@@ -55,6 +57,7 @@ const submit = () => {
                 required
               />
             </VCol>
+
             <VCol cols="12" md="6">
               <VTextField
                 v-model="form.email"
@@ -64,6 +67,7 @@ const submit = () => {
                 required
               />
             </VCol>
+
             <VCol cols="12" md="6">
               <VTextField
                 v-model="form.password"
@@ -72,6 +76,7 @@ const submit = () => {
                 :error-messages="form.errors.password"
               />
             </VCol>
+
             <VCol cols="12" md="6">
               <VTextField
                 v-model="form.password_confirmation"
@@ -79,39 +84,82 @@ const submit = () => {
                 type="password"
               />
             </VCol>
+
             <VCol cols="12" md="6">
               <VSelect
                 v-model="form.role"
-                :items="roles.map(r => ({ title: r.name, value: r.name }))"
+                :items="roles.map(r => ({
+                  title: r.name,
+                  value: r.name
+                }))"
                 label="Role"
                 :error-messages="form.errors.role"
                 required
               />
             </VCol>
+
             <VCol cols="12" md="6">
               <VSelect
                 v-model="form.tenant_id"
-                :items="tenants.map(t => ({ title: t.name + ' (' + t.id + ')', value: t.id }))"
+                :items="tenants.map(t => ({
+                  title: t.name + ' (' + t.id + ')',
+                  value: t.id
+                }))"
                 label="Tenant"
                 :error-messages="form.errors.tenant_id"
                 required
               />
             </VCol>
+
             <VCol cols="12" md="6">
-              <VTextField v-model="form.phone" label="Phone" :error-messages="form.errors.phone" />
+              <VTextField
+                v-model="form.phone"
+                label="Phone"
+                :error-messages="form.errors.phone"
+              />
             </VCol>
+
             <VCol cols="12" md="6">
-              <VTextField v-model="form.birthday" label="Birthday" type="date" :error-messages="form.errors.birthday" />
+              <VTextField
+                v-model="form.birthday"
+                label="Birthday"
+                type="date"
+                :error-messages="form.errors.birthday"
+              />
             </VCol>
+
             <VCol cols="12" md="6">
-              <VTextField v-model="form.department" label="Department" :error-messages="form.errors.department" />
+              <VTextField
+                v-model="form.department"
+                label="Department"
+                :error-messages="form.errors.department"
+              />
             </VCol>
+
             <VCol cols="12">
-              <VTextarea v-model="form.address" label="Address" :error-messages="form.errors.address" rows="3" />
+              <VTextarea
+                v-model="form.address"
+                label="Address"
+                :error-messages="form.errors.address"
+                rows="3"
+              />
             </VCol>
+
             <VCol cols="12" class="d-flex ga-2">
-              <VBtn type="submit" color="primary" :loading="form.processing">Update User</VBtn>
-              <VBtn variant="outlined" :href="route('admin.users.index')">Cancel</VBtn>
+              <VBtn
+                type="submit"
+                color="primary"
+                :loading="form.processing"
+              >
+                Update User
+              </VBtn>
+
+              <VBtn
+                variant="outlined"
+                :href="route('admin.users.index')"
+              >
+                Cancel
+              </VBtn>
             </VCol>
           </VRow>
         </VForm>
@@ -119,11 +167,3 @@ const submit = () => {
     </VCard>
   </div>
 </template>
-
-<script>
-export default {
-  created() {
-    this.init(this.$props.user)
-  }
-}
-</script>

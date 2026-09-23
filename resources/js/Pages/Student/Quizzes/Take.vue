@@ -1,290 +1,644 @@
 <script setup>
-import { ref, computed, onMounted, onBeforeUnmount, watch } from 'vue'
+import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import { router } from '@inertiajs/vue3'
 
 const props = defineProps({
-  attempt: { type: Object, required: true },
-  remaining: { type: Number, default: null },
-  preventCopyPaste: { type: Boolean, default: false },
-  randomizeOptions: { type: Boolean, default: false },
+  attempt: {
+    type: Object,
+    required: true,
+  },
+
+  remaining: {
+    type: Number,
+    default: null,
+  },
+
+  preventCopyPaste: {
+    type: Boolean,
+    default: false,
+  },
+
+  randomizeOptions: {
+    type: Boolean,
+    default: false,
+  },
 })
 
 const timeLeft = ref(props.remaining ?? 0)
 const answers = ref({})
 const tabSwitches = ref(0)
 const submitting = ref(false)
+
 const maxTabSwitches = 3
 let timerInterval = null
+
+/*
+|--------------------------------------------------------------------------
+| Timer
+|--------------------------------------------------------------------------
+*/
 
 const hasTimer = computed(() => props.remaining > 0)
 
 const formattedTime = computed(() => {
   const mins = Math.floor(timeLeft.value / 60)
   const secs = timeLeft.value % 60
+
   return `${mins}:${String(secs).padStart(2, '0')}`
 })
 
+/*
+|--------------------------------------------------------------------------
+| Randomize Options
+|--------------------------------------------------------------------------
+|
+| IMPORTANT:
+| - Urutan soal TIDAK diacak di frontend.
+| - Urutan soal tetap mengikuti backend / quiz attempt.
+| - Hanya options yang bisa diacak.
+| - Hasil shuffle disimpan agar tidak berubah ketika component
+|   melakukan re-render.
+|
+*/
+
+const randomizedOptions = ref(new Map())
+
+function shuffleArray(array) {
+  const shuffled = [...array]
+
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1))
+
+    ;[shuffled[i], shuffled[j]] = [
+      shuffled[j],
+      shuffled[i],
+    ]
+  }
+
+  return shuffled
+}
+
+function initializeRandomizedOptions() {
+  const qs = props.attempt.quiz.questions || []
+
+  const map = new Map()
+
+  if (!props.randomizeOptions) {
+    randomizedOptions.value = map
+    return
+  }
+
+  qs.forEach(question => {
+    if (Array.isArray(question.options)) {
+      map.set(
+        question.id,
+        shuffleArray(question.options)
+      )
+    }
+  })
+
+  randomizedOptions.value = map
+}
+
 const questions = computed(() => {
   const qs = props.attempt.quiz.questions || []
-  if (props.randomizeOptions) {
-    return qs.map(q => {
-      if (q.options && Array.isArray(q.options)) {
-        const shuffled = [...q.options]
-        for (let i = shuffled.length - 1; i > 0; i--) {
-          const j = Math.floor(Math.random() * (i + 1));
-          [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]]
-        }
-        return { ...q, options: shuffled }
-      }
-      return q
-    })
+
+  if (!props.randomizeOptions) {
+    return qs
   }
-  return qs
+
+  return qs.map(question => {
+    if (!Array.isArray(question.options)) {
+      return question
+    }
+
+    return {
+      ...question,
+      options:
+        randomizedOptions.value.get(question.id)
+        ?? question.options,
+    }
+  })
 })
 
-function getOptionKey(q, optIndex) {
-  return `${q.id}_${optIndex}`
+/*
+|--------------------------------------------------------------------------
+| Multiple Choice
+|--------------------------------------------------------------------------
+*/
+
+function getOptionKey(question, optionIndex) {
+  return `${question.id}_${optionIndex}`
 }
 
-function isSelected(q, optIndex) {
-  return answers.value[q.id] === String(optIndex)
+function isSelected(question, option) {
+  return answers.value[question.id] === String(option)
 }
 
-function selectOption(q, optIndex) {
-  answers.value[q.id] = String(optIndex)
+function selectOption(question, option) {
+  answers.value[question.id] = String(option)
 }
 
-// Timer countdown
-if (hasTimer.value) {
+/*
+|--------------------------------------------------------------------------
+| True / False
+|--------------------------------------------------------------------------
+*/
+
+function isTrueSelected(question) {
+  return answers.value[question.id] === 'true'
+}
+
+function isFalseSelected(question) {
+  return answers.value[question.id] === 'false'
+}
+
+function selectTrueFalse(question, value) {
+  answers.value[question.id] = value
+}
+
+/*
+|--------------------------------------------------------------------------
+| Timer
+|--------------------------------------------------------------------------
+*/
+
+function startTimer() {
+  if (!hasTimer.value) {
+    return
+  }
+
   timerInterval = setInterval(() => {
     timeLeft.value--
+
     if (timeLeft.value <= 0) {
       clearInterval(timerInterval)
+      timerInterval = null
+
       submitQuiz(true)
     }
   }, 1000)
 }
 
-// Tab switch detection
+/*
+|--------------------------------------------------------------------------
+| Tab Switch Detection
+|--------------------------------------------------------------------------
+*/
+
 function onVisibilityChange() {
   if (document.hidden) {
     tabSwitches.value++
+
     if (tabSwitches.value >= maxTabSwitches) {
-      alert('You have switched tabs too many times. Your quiz will be submitted.')
+      alert(
+        'You have switched tabs too many times. Your quiz will be submitted.'
+      )
+
       submitQuiz(true)
     }
   }
 }
 
-document.addEventListener('visibilitychange', onVisibilityChange)
+/*
+|--------------------------------------------------------------------------
+| Copy / Paste Prevention
+|--------------------------------------------------------------------------
+*/
 
-// Copy-paste prevention
-function preventAction(e) {
+function preventAction(event) {
   if (props.preventCopyPaste) {
-    e.preventDefault()
-    alert('This action is not allowed during this exam.')
+    event.preventDefault()
+
+    alert(
+      'This action is not allowed during this exam.'
+    )
   }
 }
 
-function onKeydown(e) {
-  if (props.preventCopyPaste && (e.ctrlKey || e.metaKey) && ['c', 'v', 'x', 'a'].includes(e.key.toLowerCase())) {
-    e.preventDefault()
+function onKeydown(event) {
+  if (
+    props.preventCopyPaste &&
+    (event.ctrlKey || event.metaKey) &&
+    ['c', 'v', 'x', 'a'].includes(
+      event.key.toLowerCase()
+    )
+  ) {
+    event.preventDefault()
   }
 }
 
-onMounted(() => {
-  if (props.preventCopyPaste) {
-    document.addEventListener('copy', preventAction)
-    document.addEventListener('paste', preventAction)
-    document.addEventListener('cut', preventAction)
-    document.addEventListener('contextmenu', preventAction)
-    document.addEventListener('keydown', onKeydown)
-  }
-})
-
-onBeforeUnmount(() => {
-  if (timerInterval) clearInterval(timerInterval)
-  document.removeEventListener('visibilitychange', onVisibilityChange)
-  if (props.preventCopyPaste) {
-    document.removeEventListener('copy', preventAction)
-    document.removeEventListener('paste', preventAction)
-    document.removeEventListener('cut', preventAction)
-    document.removeEventListener('contextmenu', preventAction)
-    document.removeEventListener('keydown', onKeydown)
-  }
-})
+/*
+|--------------------------------------------------------------------------
+| Submit Quiz
+|--------------------------------------------------------------------------
+*/
 
 function submitQuiz(force = false) {
-  if (!force && !confirm('Are you sure you want to submit?')) return
+  if (submitting.value) {
+    return
+  }
+
+  if (
+    !force &&
+    !confirm('Are you sure you want to submit?')
+  ) {
+    return
+  }
+
   submitting.value = true
-  router.post(route('student.quizzes.submit', props.attempt.id), {
-    answers: answers.value,
-    tab_switches: tabSwitches.value,
-  }, {
-    preserveScroll: true,
-    onError: () => { submitting.value = false },
-  })
+
+  router.post(
+    route(
+      'student.quizzes.submit',
+      props.attempt.id
+    ),
+    {
+      answers: answers.value,
+      tab_switches: tabSwitches.value,
+    },
+    {
+      preserveScroll: true,
+
+      onError: () => {
+        submitting.value = false
+      },
+    }
+  )
 }
+
+/*
+|--------------------------------------------------------------------------
+| Mounted
+|--------------------------------------------------------------------------
+*/
+
+onMounted(() => {
+  initializeRandomizedOptions()
+
+  startTimer()
+
+  document.addEventListener(
+    'visibilitychange',
+    onVisibilityChange
+  )
+
+  if (props.preventCopyPaste) {
+    document.addEventListener(
+      'copy',
+      preventAction
+    )
+
+    document.addEventListener(
+      'paste',
+      preventAction
+    )
+
+    document.addEventListener(
+      'cut',
+      preventAction
+    )
+
+    document.addEventListener(
+      'contextmenu',
+      preventAction
+    )
+
+    document.addEventListener(
+      'keydown',
+      onKeydown
+    )
+  }
+})
+
+/*
+|--------------------------------------------------------------------------
+| Before Unmount
+|--------------------------------------------------------------------------
+*/
+
+onBeforeUnmount(() => {
+  if (timerInterval) {
+    clearInterval(timerInterval)
+    timerInterval = null
+  }
+
+  document.removeEventListener(
+    'visibilitychange',
+    onVisibilityChange
+  )
+
+  if (props.preventCopyPaste) {
+    document.removeEventListener(
+      'copy',
+      preventAction
+    )
+
+    document.removeEventListener(
+      'paste',
+      preventAction
+    )
+
+    document.removeEventListener(
+      'cut',
+      preventAction
+    )
+
+    document.removeEventListener(
+      'contextmenu',
+      preventAction
+    )
+
+    document.removeEventListener(
+      'keydown',
+      onKeydown
+    )
+  }
+})
 </script>
 
 <template>
   <div class="quiz-take">
-    <!-- Timer floating badge -->
+
+    <!-- Timer -->
     <VCard
       v-if="hasTimer"
-      class="quiz-timer"
+      class="quiz-timer mb-6"
       flat
       border
     >
-      <div class="text-caption text-medium-emphasis">Time Remaining</div>
-      <div
-        class="text-h5 font-weight-bold"
-        :class="timeLeft < 60 ? 'text-error' : 'text-high-emphasis'"
+      <VCardText
+        class="d-flex align-center justify-space-between"
       >
-        {{ formattedTime }}
-      </div>
+        <div class="d-flex align-center ga-2">
+          <VIcon icon="tabler-clock" />
+
+          <span class="font-weight-medium">
+            Time Remaining
+          </span>
+        </div>
+
+        <span
+          class="text-h6 font-weight-bold"
+          :class="{
+            'text-error': timeLeft <= 60
+          }"
+        >
+          {{ formattedTime }}
+        </span>
+      </VCardText>
     </VCard>
 
-    <div class="mb-6">
-      <h4 class="text-h4 font-weight-bold">{{ attempt.quiz.title }}</h4>
-      <p class="text-body-2 text-medium-emphasis mt-1">{{ attempt.quiz.section?.title ?? '' }}</p>
-    </div>
+    <!-- Tab Switch Warning -->
+    <VAlert
+      v-if="tabSwitches > 0"
+      type="warning"
+      variant="tonal"
+      class="mb-6"
+    >
+      Tab switches:
+      <strong>{{ tabSwitches }}</strong>
+      /
+      {{ maxTabSwitches }}
+    </VAlert>
 
+    <!-- Questions -->
     <div class="d-flex flex-column ga-6">
+
       <VCard
         v-for="(question, index) in questions"
         :key="question.id"
+        class="quiz-question"
         flat
         border
-        class="pa-6"
       >
-        <div class="d-flex align-start justify-space-between mb-4">
-          <h5 class="text-h5">Question {{ index + 1 }}</h5>
-          <VChip
-            size="small"
-            variant="tonal"
-            :color="question.question_type === 'multiple_choice' ? 'primary' : question.question_type === 'true_false' ? 'success' : 'purple'"
-            label
-          >
-            {{ question.pivot?.points || question.points }} pts
-          </VChip>
-        </div>
+        <VCardText>
 
-        <p class="text-body-1 mb-4">{{ question.question_text }}</p>
+          <!-- Question Header -->
+          <div class="d-flex align-start ga-3 mb-5">
 
-        <!-- Multiple Choice -->
-        <div
-          v-if="question.question_type === 'multiple_choice' && question.options?.length"
-          class="d-flex flex-column ga-2"
-        >
-          <VLabel
-            v-for="(option, optIndex) in question.options"
-            :key="getOptionKey(question, optIndex)"
-            class="option-label pa-3 rounded-lg"
-            :class="{ 'option-selected': isSelected(question, optIndex) }"
-            @click="selectOption(question, optIndex)"
-          >
-            <VRadio
-              :model-value="isSelected(question, optIndex)"
+            <VAvatar
+              size="36"
               color="primary"
-              hide-details
-              density="default"
-            />
-            <span class="text-body-2 ms-2">{{ option }}</span>
-          </VLabel>
-        </div>
+              variant="tonal"
+            >
+              {{ index + 1 }}
+            </VAvatar>
 
-        <!-- True/False -->
-        <div
-          v-else-if="question.question_type === 'true_false'"
-          class="d-flex ga-4"
-        >
-          <VLabel
-            class="option-label pa-3 rounded-lg flex-grow-1 text-center"
-            :class="{ 'option-selected': answers[question.id] === 'true' }"
-            @click="selectOption(question, 0); answers[question.id] = 'true'"
-          >
-            <VRadio
-              :model-value="answers[question.id] === 'true'"
-              color="primary"
-              hide-details
-              density="default"
-            />
-            <span class="text-body-2 ms-2">True</span>
-          </VLabel>
-          <VLabel
-            class="option-label pa-3 rounded-lg flex-grow-1 text-center"
-            :class="{ 'option-selected': answers[question.id] === 'false' }"
-            @click="selectOption(question, 1); answers[question.id] = 'false'"
-          >
-            <VRadio
-              :model-value="answers[question.id] === 'false'"
-              color="primary"
-              hide-details
-              density="default"
-            />
-            <span class="text-body-2 ms-2">False</span>
-          </VLabel>
-        </div>
+            <div class="flex-grow-1">
 
-        <!-- Essay -->
-        <VTextarea
-          v-else
-          v-model="answers[question.id]"
-          variant="outlined"
-          placeholder="Write your answer..."
-          rows="4"
-          hide-details
-        />
+              <div
+                class="text-body-1 font-weight-medium"
+                style="white-space: pre-line;"
+              >
+                {{ question.question_text }}
+              </div>
+
+              <div
+                v-if="question.points"
+                class="text-caption text-medium-emphasis mt-1"
+              >
+                {{ question.points }} point(s)
+              </div>
+
+            </div>
+
+          </div>
+
+          <!-- Multiple Choice -->
+          <div
+            v-if="
+              question.question_type === 'multiple_choice' &&
+              question.options?.length
+            "
+            class="d-flex flex-column ga-3"
+          >
+            <VLabel
+              v-for="(option, optIndex) in question.options"
+              :key="
+                getOptionKey(
+                  question,
+                  optIndex
+                )
+              "
+              class="option-label pa-3 rounded-lg"
+              :class="{
+                'option-selected':
+                  isSelected(
+                    question,
+                    option
+                  )
+              }"
+              @click="
+                selectOption(
+                  question,
+                  option
+                )
+              "
+            >
+              <VRadio
+                :model-value="
+                  isSelected(
+                    question,
+                    option
+                  )
+                "
+                :value="true"
+                class="me-2"
+              />
+
+              <span>
+                {{ option }}
+              </span>
+            </VLabel>
+          </div>
+
+          <!-- True / False -->
+          <div
+            v-else-if="
+              question.question_type === 'true_false'
+            "
+            class="d-flex flex-column ga-3"
+          >
+
+            <!-- True -->
+            <VLabel
+              class="option-label pa-3 rounded-lg"
+              :class="{
+                'option-selected':
+                  isTrueSelected(question)
+              }"
+              @click="
+                selectTrueFalse(
+                  question,
+                  'true'
+                )
+              "
+            >
+              <VRadio
+                :model-value="
+                  isTrueSelected(question)
+                "
+                :value="true"
+                class="me-2"
+              />
+
+              <span>
+                True
+              </span>
+            </VLabel>
+
+            <!-- False -->
+            <VLabel
+              class="option-label pa-3 rounded-lg"
+              :class="{
+                'option-selected':
+                  isFalseSelected(question)
+              }"
+              @click="
+                selectTrueFalse(
+                  question,
+                  'false'
+                )
+              "
+            >
+              <VRadio
+                :model-value="
+                  isFalseSelected(question)
+                "
+                :value="true"
+                class="me-2"
+              />
+
+              <span>
+                False
+              </span>
+            </VLabel>
+
+          </div>
+
+          <!-- Essay -->
+          <VTextarea
+            v-else
+            v-model="answers[question.id]"
+            label="Your answer"
+            placeholder="Type your answer here..."
+            rows="5"
+            auto-grow
+          />
+
+        </VCardText>
       </VCard>
+
     </div>
 
-    <div class="d-flex justify-space-between align-center pt-4 mb-8">
-      <span class="text-body-2 text-medium-emphasis">{{ questions.length }} questions</span>
+    <!-- Submit -->
+    <div class="d-flex justify-end mt-8">
+
       <VBtn
-        color="success"
-        variant="elevated"
+        color="primary"
         size="large"
         :loading="submitting"
-        @click="submitQuiz(false)"
+        :disabled="submitting"
+        @click="submitQuiz()"
       >
-        <VIcon start icon="mdi-check" />
+        <VIcon
+          start
+          icon="tabler-check"
+        />
+
         Submit Quiz
       </VBtn>
+
     </div>
+
   </div>
 </template>
 
 <style scoped>
 .quiz-take {
-  max-width: 720px;
-  margin: 0 auto;
+  position: relative;
 }
 
 .quiz-timer {
-  position: fixed;
-  top: 72px;
-  right: 24px;
-  z-index: 100;
-  padding: 12px 20px;
-  text-align: center;
-  min-width: 120px;
+  position: sticky;
+  top: 16px;
+  z-index: 10;
+}
+
+.quiz-question {
+  overflow: hidden;
 }
 
 .option-label {
-  display: flex;
-  align-items: center;
-  border: 1px solid rgba(var(--v-border-color), var(--v-border-opacity));
   cursor: pointer;
-  transition: background-color 0.15s, border-color 0.15s;
+  border: 1px solid
+    rgba(
+      var(--v-border-color),
+      var(--v-border-opacity)
+    );
+
+  transition:
+    background-color 0.2s ease,
+    border-color 0.2s ease;
 }
 
 .option-label:hover {
-  background-color: rgba(var(--v-theme-primary), 0.04);
+  background-color:
+    rgba(
+      var(--v-theme-primary),
+      0.04
+    );
 }
 
 .option-selected {
-  border-color: rgb(var(--v-theme-primary));
-  background-color: rgba(var(--v-theme-primary), 0.08);
+  border-color:
+    rgb(var(--v-theme-primary));
+
+  background-color:
+    rgba(
+      var(--v-theme-primary),
+      0.08
+    );
 }
 </style>
