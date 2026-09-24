@@ -46,18 +46,41 @@ class AdminController extends Controller
     /**
      * List all users
      */
-    public function users()
+    public function users(Request $request)
     {
-        $user = auth()->user();
-        $isTenantAdmin = $user->hasRole('tenant_admin');
+        $authUser = auth()->user();
 
-        if ($isTenantAdmin) {
-            $users = User::where('tenant_id', $user->tenant_id)->with('roles')->paginate(10);
-        } else {
-            $users = User::with('roles')->paginate(10);
+        $query = User::query()
+            ->with(['roles'])
+            ->when(
+                $authUser->hasRole('tenant_admin'),
+                fn ($query) => $query->where('tenant_id', $authUser->tenant_id)
+            );
+
+        if ($request->filled('search')) {
+            $search = $request->search;
+
+            $query->where(function ($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                    ->orWhere('email', 'like', "%{$search}%")
+                    ->orWhere('tenant_id', 'like', "%{$search}%")
+                    ->orWhereHas('roles', function ($roleQuery) use ($search) {
+                        $roleQuery->where('name', 'like', "%{$search}%");
+                    });
+            });
         }
 
-        return Inertia::render('Admin/Users/Index', compact('users'));
+        $users = $query
+            ->latest()
+            ->paginate(10)
+            ->withQueryString();
+
+        return Inertia::render('Admin/Users/Index', [
+            'users' => $users,
+            'filters' => [
+                'search' => $request->search,
+            ],
+        ]);
     }
 
     /**
@@ -88,8 +111,19 @@ class AdminController extends Controller
 
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
-            'email' => ['required', 'email', 'unique:users,email'],
-            'password' => ['required', 'confirmed', Password::defaults()],
+
+            'email' => [
+                'required',
+                'email',
+                'unique:users,email',
+            ],
+
+            'password' => [
+                'required',
+                'confirmed',
+                Password::defaults(),
+            ],
+
             'role' => [
                 'required',
                 'string',
@@ -97,6 +131,7 @@ class AdminController extends Controller
                     ? Rule::in(['tenant_admin', 'instructor', 'student'])
                     : Rule::exists('roles', 'name'),
             ],
+
             'tenant_id' => [
                 'required',
                 'string',
@@ -104,32 +139,22 @@ class AdminController extends Controller
                     ? Rule::in([$authUser->tenant_id])
                     : Rule::exists('tenants', 'id'),
             ],
+
             'phone' => ['nullable', 'string', 'max:20'],
             'birthday' => ['nullable', 'date', 'before:today'],
             'department' => ['nullable', 'string', 'max:100'],
             'address' => ['nullable', 'string', 'max:500'],
         ]);
 
-        // Tenant admin can only create users in their own tenant
-        if ($authUser->hasRole('tenant_admin') && $validated['tenant_id'] !== $authUser->tenant_id) {
-            abort(403, 'Unauthorized');
-        }
+        $validated['password'] = Hash::make($validated['password']);
 
-        $user = User::create([
-            'name' => $validated['name'],
-            'email' => $validated['email'],
-            'password' => Hash::make($validated['password']),
-            'tenant_id' => $validated['tenant_id'],
-            'phone' => $validated['phone'],
-            'birthday' => $validated['birthday'],
-            'department' => $validated['department'],
-            'address' => $validated['address'],
-        ]);
+        $user = User::create($validated);
 
         $user->assignRole($validated['role']);
 
-        return redirect()->route('admin.users.index')
-            ->with('success', "User '{$validated['name']}' created successfully!");
+        return redirect()
+            ->route('admin.users.index')
+            ->with('success', 'User berhasil dibuat.');
     }
 
     /**

@@ -65,15 +65,18 @@ function toggleQuestion(id) {
           <VCheckbox v-model="form.is_exam" label="Scheduled Exam" hide-details density="default" color="error" />
         </div>
 
-        <VCard v-if="form.is_exam" color="error" variant="tonal" class="pa-4">
+        <VCard v-if="form.is_exam" color="error" variant="tonal" class="pa-5">
           <h6 class="text-h6 font-weight-bold mb-3 text-error">Exam Settings</h6>
-          <VRow><VCol cols="6"><VTextField v-model="form.start_date" label="Start Date" variant="outlined" density="default" type="datetime-local" /></VCol><VCol cols="6"><VTextField v-model="form.end_date" label="End Date" variant="outlined" density="default" type="datetime-local" /></VCol></VRow>
-          <VTextField v-model="form.grace_period" label="Grace Period (min)" variant="outlined" density="default" type="number" min="0" />
-          <div class="d-flex ga-4 mt-2">
+          <VRow class="ga-4">
+            <VCol cols="10" md="5"><VTextField v-model="form.start_date" label="Start Date" variant="outlined" density="default" type="datetime-local" /></VCol>
+            <VCol cols="10" md="5"><VTextField v-model="form.end_date" label="End Date" variant="outlined" density="default" type="datetime-local" /></VCol>
+          </VRow>
+          <VTextField v-model="form.grace_period" label="Grace Period (min)" variant="outlined" density="default" type="number" min="0" hint="Additional time allowed for entering the exam" persistent-hint class="mt-5" />
+          <!-- <div class="d-flex ga-4 mt-2">
             <VCheckbox v-model="form.randomize_options" label="Randomize Options" hide-details density="default" />
             <VCheckbox v-model="form.prevent_copy_paste" label="Prevent Copy & Paste" hide-details density="default" />
             <VCheckbox v-model="form.require_webcam" label="Require Webcam" hide-details density="default" />
-          </div>
+          </div> -->
         </VCard>
 
         <div>

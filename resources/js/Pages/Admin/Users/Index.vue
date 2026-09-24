@@ -1,16 +1,40 @@
 <script setup>
-import { ref } from 'vue'
+import { ref, watch } from 'vue'
 import { router, useForm, usePage } from '@inertiajs/vue3'
 
 const props = defineProps({
   users: { type: Object, default: () => ({ data: [] }) },
+  filters: { type: Object, default: () => ({}) },
 })
 
 const page = usePage()
 const showImportDialog = ref(false)
 
+const search = ref(props.filters?.search ?? '')
+
 const form = useForm({
   csv: null,
+})
+
+let searchTimeout
+
+watch(search, value => {
+  clearTimeout(searchTimeout)
+
+  searchTimeout = setTimeout(() => {
+    router.get(
+      route('admin.users.index'),
+      {
+        search: value || undefined,
+        page: 1,
+      },
+      {
+        preserveState: true,
+        preserveScroll: true,
+        replace: true,
+      },
+    )
+  }, 400)
 })
 
 const submitImport = () => {
@@ -35,7 +59,7 @@ const closeImportDialog = () => {
 
 const confirmDelete = user => {
   const confirmed = window.confirm(
-    `Are you sure you want to delete "${user.name}"?`
+    `Are you sure you want to delete "${user.name}"?`,
   )
 
   if (confirmed) {
@@ -101,6 +125,20 @@ const confirmDelete = user => {
         {{ err }}
       </div>
     </VAlert>
+
+    <!-- Search -->
+    <div class="mb-4">
+      <VTextField
+        v-model="search"
+        label="Search users"
+        placeholder="Search by name, email, role, or tenant..."
+        prepend-inner-icon="mdi-magnify"
+        variant="outlined"
+        density="comfortable"
+        clearable
+        hide-details
+      />
+    </div>
 
     <!-- Users Table -->
     <VCard flat border>
@@ -233,8 +271,10 @@ const confirmDelete = user => {
           v-model="users.current_page"
           :length="users.last_page"
           @update:model-value="
-            val => router.get(route('admin.users.index', { page: val }))
+            val => router.get(route('admin.users.index', { page: val, search: search || undefined, })
+            )
           "
+
         />
       </VCardText>
     </VCard>

@@ -1,5 +1,11 @@
 <script setup>
-import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
+import {
+  ref,
+  computed,
+  onMounted,
+  onBeforeUnmount,
+} from 'vue'
+
 import { router } from '@inertiajs/vue3'
 
 const props = defineProps({
@@ -24,25 +30,69 @@ const props = defineProps({
   },
 })
 
-const timeLeft = ref(props.remaining ?? 0)
+/*
+|--------------------------------------------------------------------------
+| State
+|--------------------------------------------------------------------------
+*/
+
+const timeLeft = ref(
+  props.remaining ?? 0
+)
+
 const answers = ref({})
+
 const tabSwitches = ref(0)
+
 const submitting = ref(false)
 
 const maxTabSwitches = 3
+
 let timerInterval = null
 
 /*
 |--------------------------------------------------------------------------
 | Timer
 |--------------------------------------------------------------------------
+|
+| IMPORTANT:
+|
+| Backend sudah menentukan nilai "remaining".
+|
+| Quiz:
+|   remaining = time_limit - elapsed
+|
+| Exam:
+|   remaining = end_date - now
+|
+| Karena itu Take.vue tidak perlu membedakan
+| Quiz dan Exam untuk perhitungan timer.
+|
 */
 
-const hasTimer = computed(() => props.remaining > 0)
+/*
+|--------------------------------------------------------------------------
+| Has Timer
+|--------------------------------------------------------------------------
+*/
+
+const hasTimer = computed(() => {
+  return timeLeft.value > 0
+})
+
+/*
+|--------------------------------------------------------------------------
+| Formatted Time
+|--------------------------------------------------------------------------
+*/
 
 const formattedTime = computed(() => {
-  const mins = Math.floor(timeLeft.value / 60)
-  const secs = timeLeft.value % 60
+  const mins = Math.floor(
+    timeLeft.value / 60
+  )
+
+  const secs =
+    timeLeft.value % 60
 
   return `${mins}:${String(secs).padStart(2, '0')}`
 })
@@ -56,20 +106,30 @@ const formattedTime = computed(() => {
 | - Urutan soal TIDAK diacak di frontend.
 | - Urutan soal tetap mengikuti backend / quiz attempt.
 | - Hanya options yang bisa diacak.
-| - Hasil shuffle disimpan agar tidak berubah ketika component
-|   melakukan re-render.
+| - Hasil shuffle disimpan agar tidak berubah
+|   ketika component melakukan re-render.
 |
 */
 
-const randomizedOptions = ref(new Map())
+const randomizedOptions =
+  ref(new Map())
 
 function shuffleArray(array) {
   const shuffled = [...array]
 
-  for (let i = shuffled.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1))
+  for (
+    let i = shuffled.length - 1;
+    i > 0;
+    i--
+  ) {
+    const j = Math.floor(
+      Math.random() * (i + 1)
+    )
 
-    ;[shuffled[i], shuffled[j]] = [
+    ;[
+      shuffled[i],
+      shuffled[j],
+    ] = [
       shuffled[j],
       shuffled[i],
     ]
@@ -79,7 +139,8 @@ function shuffleArray(array) {
 }
 
 function initializeRandomizedOptions() {
-  const qs = props.attempt.quiz.questions || []
+  const qs =
+    props.attempt.quiz.questions || []
 
   const map = new Map()
 
@@ -89,10 +150,16 @@ function initializeRandomizedOptions() {
   }
 
   qs.forEach(question => {
-    if (Array.isArray(question.options)) {
+    if (
+      Array.isArray(
+        question.options
+      )
+    ) {
       map.set(
         question.id,
-        shuffleArray(question.options)
+        shuffleArray(
+          question.options
+        )
       )
     }
   })
@@ -101,22 +168,29 @@ function initializeRandomizedOptions() {
 }
 
 const questions = computed(() => {
-  const qs = props.attempt.quiz.questions || []
+  const qs =
+    props.attempt.quiz.questions || []
 
   if (!props.randomizeOptions) {
     return qs
   }
 
   return qs.map(question => {
-    if (!Array.isArray(question.options)) {
+    if (
+      !Array.isArray(
+        question.options
+      )
+    ) {
       return question
     }
 
     return {
       ...question,
+
       options:
-        randomizedOptions.value.get(question.id)
-        ?? question.options,
+        randomizedOptions.value.get(
+          question.id
+        ) ?? question.options,
     }
   })
 })
@@ -127,16 +201,29 @@ const questions = computed(() => {
 |--------------------------------------------------------------------------
 */
 
-function getOptionKey(question, optionIndex) {
+function getOptionKey(
+  question,
+  optionIndex
+) {
   return `${question.id}_${optionIndex}`
 }
 
-function isSelected(question, option) {
-  return answers.value[question.id] === String(option)
+function isSelected(
+  question,
+  option
+) {
+  return (
+    answers.value[question.id] ===
+    String(option)
+  )
 }
 
-function selectOption(question, option) {
-  answers.value[question.id] = String(option)
+function selectOption(
+  question,
+  option
+) {
+  answers.value[question.id] =
+    String(option)
 }
 
 /*
@@ -146,15 +233,25 @@ function selectOption(question, option) {
 */
 
 function isTrueSelected(question) {
-  return answers.value[question.id] === 'true'
+  return (
+    answers.value[question.id] ===
+    'true'
+  )
 }
 
 function isFalseSelected(question) {
-  return answers.value[question.id] === 'false'
+  return (
+    answers.value[question.id] ===
+    'false'
+  )
 }
 
-function selectTrueFalse(question, value) {
-  answers.value[question.id] = value
+function selectTrueFalse(
+  question,
+  value
+) {
+  answers.value[question.id] =
+    value
 }
 
 /*
@@ -169,11 +266,19 @@ function startTimer() {
   }
 
   timerInterval = setInterval(() => {
+    if (submitting.value) {
+      return
+    }
+
     timeLeft.value--
 
     if (timeLeft.value <= 0) {
-      clearInterval(timerInterval)
-      timerInterval = null
+      timeLeft.value = 0
+
+      if (timerInterval) {
+        clearInterval(timerInterval)
+        timerInterval = null
+      }
 
       submitQuiz(true)
     }
@@ -187,10 +292,16 @@ function startTimer() {
 */
 
 function onVisibilityChange() {
-  if (document.hidden) {
+  if (
+    document.hidden &&
+    !submitting.value
+  ) {
     tabSwitches.value++
 
-    if (tabSwitches.value >= maxTabSwitches) {
+    if (
+      tabSwitches.value >=
+      maxTabSwitches
+    ) {
       alert(
         'You have switched tabs too many times. Your quiz will be submitted.'
       )
@@ -219,8 +330,14 @@ function preventAction(event) {
 function onKeydown(event) {
   if (
     props.preventCopyPaste &&
-    (event.ctrlKey || event.metaKey) &&
-    ['c', 'v', 'x', 'a'].includes(
+    (event.ctrlKey ||
+      event.metaKey) &&
+    [
+      'c',
+      'v',
+      'x',
+      'a',
+    ].includes(
       event.key.toLowerCase()
     )
   ) {
@@ -241,12 +358,19 @@ function submitQuiz(force = false) {
 
   if (
     !force &&
-    !confirm('Are you sure you want to submit?')
+    !confirm(
+      'Are you sure you want to submit?'
+    )
   ) {
     return
   }
 
   submitting.value = true
+
+  if (timerInterval) {
+    clearInterval(timerInterval)
+    timerInterval = null
+  }
 
   router.post(
     route(
@@ -255,13 +379,30 @@ function submitQuiz(force = false) {
     ),
     {
       answers: answers.value,
-      tab_switches: tabSwitches.value,
+
+      tab_switches:
+        tabSwitches.value,
     },
     {
       preserveScroll: true,
 
       onError: () => {
         submitting.value = false
+
+        /*
+        |--------------------------------------------------------------
+        | Timer
+        |--------------------------------------------------------------
+        |
+        | Jika request gagal, timer bisa dilanjutkan.
+        |
+        */
+        if (
+          timeLeft.value > 0 &&
+          !timerInterval
+        ) {
+          startTimer()
+        }
       },
     }
   )
@@ -370,10 +511,14 @@ onBeforeUnmount(() => {
       <VCardText
         class="d-flex align-center justify-space-between"
       >
-        <div class="d-flex align-center ga-2">
+        <div
+          class="d-flex align-center ga-2"
+        >
           <VIcon icon="tabler-clock" />
 
-          <span class="font-weight-medium">
+          <span
+            class="font-weight-medium"
+          >
             Time Remaining
           </span>
         </div>
@@ -381,7 +526,8 @@ onBeforeUnmount(() => {
         <span
           class="text-h6 font-weight-bold"
           :class="{
-            'text-error': timeLeft <= 60
+            'text-error':
+              timeLeft <= 60
           }"
         >
           {{ formattedTime }}
@@ -397,16 +543,22 @@ onBeforeUnmount(() => {
       class="mb-6"
     >
       Tab switches:
-      <strong>{{ tabSwitches }}</strong>
+      <strong>
+        {{ tabSwitches }}
+      </strong>
       /
       {{ maxTabSwitches }}
     </VAlert>
 
     <!-- Questions -->
-    <div class="d-flex flex-column ga-6">
-
+    <div
+      class="d-flex flex-column ga-6"
+    >
       <VCard
-        v-for="(question, index) in questions"
+        v-for="(
+          question,
+          index
+        ) in questions"
         :key="question.id"
         class="quiz-question"
         flat
@@ -415,8 +567,9 @@ onBeforeUnmount(() => {
         <VCardText>
 
           <!-- Question Header -->
-          <div class="d-flex align-start ga-3 mb-5">
-
+          <div
+            class="d-flex align-start ga-3 mb-5"
+          >
             <VAvatar
               size="36"
               color="primary"
@@ -425,8 +578,9 @@ onBeforeUnmount(() => {
               {{ index + 1 }}
             </VAvatar>
 
-            <div class="flex-grow-1">
-
+            <div
+              class="flex-grow-1"
+            >
               <div
                 class="text-body-1 font-weight-medium"
                 style="white-space: pre-line;"
@@ -438,23 +592,26 @@ onBeforeUnmount(() => {
                 v-if="question.points"
                 class="text-caption text-medium-emphasis mt-1"
               >
-                {{ question.points }} point(s)
+                {{ question.points }}
+                point(s)
               </div>
-
             </div>
-
           </div>
 
           <!-- Multiple Choice -->
           <div
             v-if="
-              question.question_type === 'multiple_choice' &&
+              question.question_type ===
+                'multiple_choice' &&
               question.options?.length
             "
             class="d-flex flex-column ga-3"
           >
             <VLabel
-              v-for="(option, optIndex) in question.options"
+              v-for="(
+                option,
+                optIndex
+              ) in question.options"
               :key="
                 getOptionKey(
                   question,
@@ -496,7 +653,8 @@ onBeforeUnmount(() => {
           <!-- True / False -->
           <div
             v-else-if="
-              question.question_type === 'true_false'
+              question.question_type ===
+              'true_false'
             "
             class="d-flex flex-column ga-3"
           >
@@ -506,7 +664,9 @@ onBeforeUnmount(() => {
               class="option-label pa-3 rounded-lg"
               :class="{
                 'option-selected':
-                  isTrueSelected(question)
+                  isTrueSelected(
+                    question
+                  )
               }"
               @click="
                 selectTrueFalse(
@@ -517,7 +677,9 @@ onBeforeUnmount(() => {
             >
               <VRadio
                 :model-value="
-                  isTrueSelected(question)
+                  isTrueSelected(
+                    question
+                  )
                 "
                 :value="true"
                 class="me-2"
@@ -533,7 +695,9 @@ onBeforeUnmount(() => {
               class="option-label pa-3 rounded-lg"
               :class="{
                 'option-selected':
-                  isFalseSelected(question)
+                  isFalseSelected(
+                    question
+                  )
               }"
               @click="
                 selectTrueFalse(
@@ -544,7 +708,9 @@ onBeforeUnmount(() => {
             >
               <VRadio
                 :model-value="
-                  isFalseSelected(question)
+                  isFalseSelected(
+                    question
+                  )
                 "
                 :value="true"
                 class="me-2"
@@ -560,7 +726,9 @@ onBeforeUnmount(() => {
           <!-- Essay -->
           <VTextarea
             v-else
-            v-model="answers[question.id]"
+            v-model="
+              answers[question.id]
+            "
             label="Your answer"
             placeholder="Type your answer here..."
             rows="5"
@@ -569,12 +737,12 @@ onBeforeUnmount(() => {
 
         </VCardText>
       </VCard>
-
     </div>
 
     <!-- Submit -->
-    <div class="d-flex justify-end mt-8">
-
+    <div
+      class="d-flex justify-end mt-8"
+    >
       <VBtn
         color="primary"
         size="large"
@@ -589,7 +757,6 @@ onBeforeUnmount(() => {
 
         Submit Quiz
       </VBtn>
-
     </div>
 
   </div>
