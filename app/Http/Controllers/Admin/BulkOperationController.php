@@ -38,15 +38,69 @@ class BulkOperationController extends Controller
 
         $file = $request->file('csv');
         $handle = fopen($file->getPathname(), 'r');
-        $headers = fgetcsv($handle);
+
+        if ($handle === false) {
+            return back()->with('import_errors', [
+                'Unable to open CSV file.',
+            ]);
+        }
+
+        // Read header
+        $headers = fgetcsv($handle, 0, ';');
+
+        if ($headers === false || empty($headers)) {
+            fclose($handle);
+
+            return back()->with('import_errors', [
+                'CSV file is empty or invalid.',
+            ]);
+        }
+
+        // Remove UTF-8 BOM from first header
+        $headers[0] = preg_replace('/^\xEF\xBB\xBF/', '', $headers[0]);
+
+        // Trim header names
+        $headers = array_map('trim', $headers);
+
+        $requiredHeaders = [
+            'name',
+            'email',
+            'password',
+            'role',
+            'department',
+        ];
+
+        // Validate headers
+        if ($headers !== $requiredHeaders) {
+            fclose($handle);
+
+            return back()->with('import_errors', [
+                'Invalid CSV headers. Required headers: '
+                . implode(', ', $requiredHeaders),
+            ]);
+        }
+
         $tenantId = auth()->user()->tenant_id;
 
         $imported = 0;
         $errors = [];
         $row = 1;
 
-        while (($data = fgetcsv($handle)) !== false) {
+        while (($data = fgetcsv($handle, 0, ';')) !== false) {
             $row++;
+
+            // Skip completely empty rows
+            if (count(array_filter($data, fn ($value) => trim((string) $value) !== '')) === 0) {
+                continue;
+            }
+
+            // Validate column count before array_combine
+            if (count($data) !== count($headers)) {
+                $errors[] = "Row {$row}: Column count does not match the CSV headers.";
+
+                continue;
+            }
+
             $record = array_combine($headers, $data);
 
             try {
@@ -67,6 +121,7 @@ class BulkOperationController extends Controller
                 ]);
 
                 $user->assignRole($validated['role']);
+
                 $imported++;
             } catch (\Exception $e) {
                 $errors[] = "Row {$row}: {$e->getMessage()}";
@@ -75,9 +130,10 @@ class BulkOperationController extends Controller
 
         fclose($handle);
 
-        return redirect()->route('admin.bulk.import-users')
+        return redirect()
+            ->route('admin.users.store')
             ->with('success', "Imported {$imported} user(s).")
-            ->with('errors', $errors);
+            ->with('import_errors', $errors);
     }
 
     public function bulkEnrollForm()

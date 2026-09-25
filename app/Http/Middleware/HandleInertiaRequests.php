@@ -46,13 +46,16 @@ class HandleInertiaRequests extends Middleware
                 ] : null,
             ],
 
-            'errors' => fn () => $request->session()->get('errors')
-                ? $request->session()->get('errors')->getBag('default')->toArray()
-                : (object) [],
+            'errors' => fn () => (
+                $errors = $request->session()->get('errors')
+            ) instanceof \Illuminate\Support\ViewErrorBag
+                ? $errors->getBag('default')->toArray()
+                : (array) ($errors ?? []),
 
             'flash' => [
                 'success' => fn () => $request->session()->get('success'),
                 'error' => fn () => $request->session()->get('error'),
+                'import_errors' => fn () => $request->session()->get('import_errors', []),
             ],
             'notifications' => fn () => $request->user() ? [
                 'unreadCount' => $request->user()->unreadNotifications->count(),
