@@ -1,27 +1,56 @@
 <script setup>
+import { computed } from 'vue'
 import { PerfectScrollbar } from 'vue3-perfect-scrollbar'
-import { router } from '@inertiajs/vue3'
-import { usePage } from '@inertiajs/vue3'
+import { router, usePage } from '@inertiajs/vue3'
 
-const authUser = computed(() => usePage().props.auth?.user)
+const page = usePage()
+
+const authUser = computed(() => page.props.auth?.user)
+
+const whatsappCustomerService = computed(
+  () => page.props.whatsappCustomerService
+)
+
+const whatsappNumber = computed(
+  () => whatsappCustomerService.value?.phone_number || ''
+)
 
 const logout = () => {
   router.post(route('logout'))
 }
 
+const openCustomerService = () => {
+  if (!whatsappNumber.value) {
+    return
+  }
+
+  const url = `https://wa.me/${whatsappNumber.value}`
+
+  window.open(url, '_blank', 'noopener,noreferrer')
+}
+
 const userProfileList = [
   { type: 'divider' },
+
   {
     type: 'navItem',
     icon: 'mdi-account-outline',
     title: 'Profile',
     href: route('profile.show'),
   },
+
   {
     type: 'navItem',
     icon: 'mdi-cog-outline',
     title: 'Settings',
     href: route('profile.edit'),
+  },
+
+  {
+    type: 'navItem',
+    icon: 'mdi-whatsapp',
+    title: 'Customer Service',
+    action: 'customerService',
   },
 ]
 </script>
@@ -89,7 +118,25 @@ const userProfileList = [
               :key="item.title"
             >
               <VListItem
-                v-if="item.type === 'navItem'"
+                v-if="item.type === 'navItem' && item.action === 'customerService'"
+                :disabled="!whatsappCustomerService"
+                @click="openCustomerService"
+              >
+                <template #prepend>
+                  <VIcon
+                    :icon="item.icon"
+                    size="22"
+                    color="success"
+                  />
+                </template>
+
+                <VListItemTitle>
+                  {{ item.title }}
+                </VListItemTitle>
+              </VListItem>
+
+              <VListItem
+                v-else-if="item.type === 'navItem'"
                 :href="item.href"
               >
                 <template #prepend>
@@ -99,7 +146,9 @@ const userProfileList = [
                   />
                 </template>
 
-                <VListItemTitle>{{ item.title }}</VListItemTitle>
+                <VListItemTitle>
+                  {{ item.title }}
+                </VListItemTitle>
               </VListItem>
 
               <VDivider

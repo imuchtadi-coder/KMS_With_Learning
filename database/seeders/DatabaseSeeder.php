@@ -26,5 +26,9 @@ class DatabaseSeeder extends Seeder
         $this->call([
             GamificationConfigSeeder::class,
         ]);
+
+        $this->call([
+            WhatsappCustomerServiceSeeder::class,
+        ]);
     }
 }

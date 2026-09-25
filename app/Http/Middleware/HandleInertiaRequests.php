@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Models\WhatsappCustomerService;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
 
@@ -35,8 +36,13 @@ class HandleInertiaRequests extends Middleware
      */
     public function share(Request $request): array
     {
+        $whatsappCustomerService = WhatsappCustomerService::query()
+            ->where('is_active', true)
+            ->first();
+
         return [
             ...parent::share($request),
+
             'auth' => fn () => [
                 'user' => $request->user() ? [
                     'id' => $request->user()->id,
@@ -57,16 +63,43 @@ class HandleInertiaRequests extends Middleware
                 'error' => fn () => $request->session()->get('error'),
                 'import_errors' => fn () => $request->session()->get('import_errors', []),
             ],
+
             'notifications' => fn () => $request->user() ? [
                 'unreadCount' => $request->user()->unreadNotifications->count(),
-                'items' => $request->user()->notifications()->latest()->take(5)->get()->map(fn ($n) => [
-                    'id' => $n->id,
-                    'title' => strip_tags(str_replace(['<strong>', '</strong>'], '', $n->data['message'] ?? 'Notification')),
-                    'subtitle' => $n->data['course_title'] ?? $n->data['quiz_title'] ?? $n->data['assignment_title'] ?? '',
-                    'time' => $n->created_at->diffForHumans(),
-                    'isSeen' => $n->read_at !== null,
-                    'action_url' => $n->data['action_url'] ?? '#',
-                ]),
+
+                'items' => $request->user()
+                    ->notifications()
+                    ->latest()
+                    ->take(5)
+                    ->get()
+                    ->map(fn ($n) => [
+                        'id' => $n->id,
+                        'title' => strip_tags(
+                            str_replace(
+                                ['<strong>', '</strong>'],
+                                '',
+                                $n->data['message'] ?? 'Notification'
+                            )
+                        ),
+                        'subtitle' => $n->data['course_title']
+                            ?? $n->data['quiz_title']
+                            ?? $n->data['assignment_title']
+                            ?? '',
+                        'time' => $n->created_at->diffForHumans(),
+                        'isSeen' => $n->read_at !== null,
+                        'action_url' => $n->data['action_url'] ?? '#',
+                    ]),
+            ] : null,
+
+            /*
+             * Master Customer Service WhatsApp
+             *
+             * Dibagikan ke seluruh halaman Inertia
+             * sehingga dapat digunakan oleh semua role.
+             */
+            'whatsappCustomerService' => $whatsappCustomerService ? [
+                'name' => $whatsappCustomerService->name,
+                'phone_number' => $whatsappCustomerService->phone_number,
             ] : null,
         ];
     }
