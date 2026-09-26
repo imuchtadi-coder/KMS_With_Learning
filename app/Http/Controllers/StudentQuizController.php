@@ -1,8 +1,7 @@
 <?php
 
-namespace App\Http\Controllers\Student;
+namespace App\Http\Controllers;
 
-use App\Http\Controllers\Controller;
 use App\Models\Grade;
 use App\Models\Quiz;
 use App\Models\QuizAnswer;
@@ -23,32 +22,32 @@ class StudentQuizController extends Controller
         $user = Auth::user();
 
         // Only published quizzes can be accessed.
-        abort_unless($quiz->is_published, 404);
+        abort_unless($quiz->published, 404);
 
         // Make sure student is enrolled in the course.
         $isEnrolled = $quiz->course
-            ->students()
-            ->where('users.id', $user->id)
+            ->enrollments()
+            ->where('user_id', $user->id)
+            ->where('status', 'active')
             ->exists();
 
         abort_unless($isEnrolled, 403);
 
         /*
-         * Exam entry window.
-         *
-         * start_date:
-         *   The exam cannot be entered before this time.
-         *
-         * grace_period:
-         *   Additional time allowed for entering the exam.
-         *
-         * end_date:
-         *   Absolute deadline for finishing the exam.
-         *
-         * NOTE:
-         * time_limit is intentionally NOT used for exams.
-         */
-        if ($quiz->is_exam) {
+        * Find an existing in-progress attempt.
+        *
+        * For exams, an existing attempt means the student has
+        * already successfully entered the exam.
+        *
+        * Therefore grace_period must NOT block re-entry.
+        */
+        $existingAttempt = QuizAttempt::where('quiz_id', $quiz->id)
+            ->where('user_id', $user->id)
+            ->where('status', 'in_progress')
+            ->latest('started_at')
+            ->first();
+
+        if ($quiz->is_exam && !$existingAttempt) {
             $now = now();
 
             if ($quiz->start_date && $now->lt($quiz->start_date)) {
@@ -98,15 +97,33 @@ class StudentQuizController extends Controller
     {
         $user = Auth::user();
 
-        abort_unless($quiz->is_published, 404);
+        abort_unless($quiz->published, 404);
 
         // Make sure student is enrolled.
         $isEnrolled = $quiz->course
-            ->students()
-            ->where('users.id', $user->id)
+            ->enrollments()
+            ->where('user_id', $user->id)
+            ->where('status', 'active')
             ->exists();
 
         abort_unless($isEnrolled, 403);
+
+        /*
+         * If an existing in-progress attempt exists,
+         * continue that attempt instead of creating another one.
+         */
+        $existingAttempt = QuizAttempt::where('quiz_id', $quiz->id)
+            ->where('user_id', $user->id)
+            ->where('status', 'in_progress')
+            ->latest('started_at')
+            ->first();
+
+        if ($existingAttempt) {
+            return redirect()->route(
+                'student.quizzes.take',
+                $existingAttempt->id
+            );
+        }
 
         /*
          * Exam entry window.
@@ -148,23 +165,6 @@ class StudentQuizController extends Controller
             $attemptCount >= (int) $quiz->max_attempts
         ) {
             abort(403, 'Maximum number of attempts reached.');
-        }
-
-        /*
-         * If an existing in-progress attempt exists,
-         * continue that attempt instead of creating another one.
-         */
-        $existingAttempt = QuizAttempt::where('quiz_id', $quiz->id)
-            ->where('user_id', $user->id)
-            ->where('status', 'in_progress')
-            ->latest('started_at')
-            ->first();
-
-        if ($existingAttempt) {
-            return redirect()->route(
-                'student.quizzes.take',
-                $existingAttempt->id
-            );
         }
 
         /*
@@ -665,7 +665,9 @@ class StudentQuizController extends Controller
                 'gradebook_item_id' => $gradebookItem->id,
             ],
             [
+                'course_id' => $quiz->course_id,
                 'score' => $scorePercentage,
+                'percentage' => $scorePercentage,
                 'letter_grade' => $letterGrade,
             ]
         );
@@ -683,11 +685,7 @@ class StudentQuizController extends Controller
 
         if (!$hasEssay) {
             $user->notify(
-                new QuizGraded(
-                    $quiz,
-                    $attempt,
-                    $scorePercentage
-                )
+                new QuizGraded($attempt)
             );
         }
 
@@ -715,25 +713,25 @@ class StudentQuizController extends Controller
     }
 
     /**
-     * Auto-submit an attempt when no answer submission
-     * can be received anymore.
+     * Auto-submit an attempt when the backend discovers
+     * that the attempt has already passed its deadline.
      *
-     * This method is NOT used by the active frontend timer.
-     *
-     * It is used when the backend discovers that the attempt
-     * is already past its deadline before normal submit().
+     * IMPORTANT:
+     * This method scores answers that have already been saved
+     * in QuizAnswer. It does NOT automatically mean score = 0.
      */
     protected function autoSubmit(QuizAttempt $attempt)
     {
         $attempt->load([
             'quiz.questions',
+            'answers',
         ]);
 
         $quiz = $attempt->quiz;
 
         /*
-         * Do not process an already finished attempt.
-         */
+        * Do not process an already finished attempt.
+        */
         if ($attempt->status !== 'in_progress') {
             return redirect()->route(
                 'student.quizzes.result',
@@ -742,26 +740,191 @@ class StudentQuizController extends Controller
         }
 
         /*
-         * There are no answers received from Take.vue in this case,
-         * so there is nothing to score.
-         *
-         * Therefore score = 0 here is valid.
-         *
-         * IMPORTANT:
-         * This method is NOT called when Take.vue timer reaches zero
-         * after the student has submitted answers.
-         */
-        $totalPoints = (float) $quiz->questions->sum(
-            fn ($question) =>
-                (float) ($question->points ?? 0)
+        * Use the saved question order when scoring.
+        *
+        * This keeps scoring consistent with the order
+        * that was generated when the attempt started.
+        */
+        $questionOrder = $attempt->question_order;
+
+        if (!is_array($questionOrder) || empty($questionOrder)) {
+            $questionOrder = $quiz->questions
+                ->pluck('id')
+                ->values()
+                ->all();
+        }
+
+        $questionsById = $quiz->questions->keyBy('id');
+
+        $questions = collect($questionOrder)
+            ->map(function ($questionId) use ($questionsById) {
+                return $questionsById->get($questionId);
+            })
+            ->filter()
+            ->values();
+
+        /*
+        * Calculate maximum points.
+        */
+        $maxPoints = (float) $questions->sum(
+            fn ($question) => (float) ($question->points ?? 0)
         );
 
-        $attempt->update([
-            'score' => 0,
-            'total_points' => $totalPoints,
-            'finished_at' => now(),
-            'status' => 'timeout',
-        ]);
+        /*
+        * Existing answers saved in QuizAnswer.
+        *
+        * Key them by question ID so we can quickly find
+        * the saved answer for each question.
+        */
+        $savedAnswers = $attempt->answers->keyBy('question_id');
+
+        $totalPoints = 0;
+
+        DB::transaction(function () use (
+            $attempt,
+            $questions,
+            $savedAnswers,
+            &$totalPoints
+        ) {
+            foreach ($questions as $question) {
+                $quizAnswer = $savedAnswers->get($question->id);
+
+                /*
+                * No saved answer means:
+                * - answer = null
+                * - incorrect
+                * - 0 points
+                */
+                if (!$quizAnswer) {
+                    continue;
+                }
+
+                $answer = $quizAnswer->answer;
+
+                /*
+                * Normalize saved answer to string.
+                */
+                if ($answer !== null) {
+                    $answer = is_scalar($answer)
+                        ? (string) $answer
+                        : json_encode($answer);
+                }
+
+                $isCorrect = null;
+                $pointsEarned = 0;
+
+                /*
+                * Essay questions are not automatically graded.
+                */
+                if ($question->type !== 'essay') {
+                    $submittedAnswer = trim(
+                        (string) ($answer ?? '')
+                    );
+
+                    $correctAnswer = trim(
+                        (string) (
+                            $question->correct_answer ?? ''
+                        )
+                    );
+
+                    /*
+                    * Compare actual answer TEXT,
+                    * not option index.
+                    */
+                    $isCorrect =
+                        $submittedAnswer !== '' &&
+                        strcasecmp(
+                            $submittedAnswer,
+                            $correctAnswer
+                        ) === 0;
+
+                    if ($isCorrect) {
+                        $pointsEarned = (float) (
+                            $question->points ?? 0
+                        );
+                    }
+                }
+
+                $totalPoints += $pointsEarned;
+
+                /*
+                * Recalculate the saved answer.
+                *
+                * This is important because QuizAnswer may have
+                * originally been saved as a draft/autosave.
+                */
+                $quizAnswer->update([
+                    'is_correct' => $isCorrect,
+                    'points_earned' => $pointsEarned,
+                ]);
+            }
+
+            /*
+            * Finalize the attempt.
+            */
+            $scorePercentage = $maxPoints > 0
+                ? round(
+                    ($totalPoints / $maxPoints) * 100,
+                    2
+                )
+                : 0;
+
+            $attempt->update([
+                'score' => $scorePercentage,
+                'total_points' => $totalPoints,
+                'finished_at' => now(),
+                'status' => 'timeout',
+            ]);
+        });
+
+        /*
+        * Calculate final score again from the finalized attempt.
+        */
+        $scorePercentage = (float) $attempt->fresh()->score;
+
+        /*
+        * Gradebook.
+        *
+        * Keep the auto-submitted attempt consistent with
+        * normal submit().
+        */
+        $user = Auth::user();
+
+        $gradebookItem = $this->getGradebookItem($quiz);
+
+        $letterGrade = $this->calculateLetterGrade(
+            $scorePercentage
+        );
+
+        Grade::updateOrCreate(
+            [
+                'user_id' => $user->id,
+                'gradebook_item_id' => $gradebookItem->id,
+            ],
+            [
+                'course_id' => $quiz->course_id,
+                'score' => $scorePercentage,
+                'percentage' => $scorePercentage,
+                'letter_grade' => $letterGrade,
+            ]
+        );
+
+        /*
+        * Notification.
+        *
+        * Only notify immediately when there are no essay
+        * questions requiring manual grading.
+        */
+        $hasEssay = $questions->contains(
+            fn ($question) =>
+                $question->type === 'essay'
+        );
+
+        if (!$hasEssay) {
+            $user->notify(
+                new QuizGraded($attempt)
+            );
+        }
 
         return redirect()->route(
             'student.quizzes.result',
@@ -803,12 +966,13 @@ class StudentQuizController extends Controller
             ->gradebookItems()
             ->firstOrCreate(
                 [
-                    'gradable_type' => Quiz::class,
-                    'gradable_id' => $quiz->id,
+                    'type' => $quiz->is_exam ? 'exam' : 'quiz',
+                    'item_id' => $quiz->id,
                 ],
                 [
-                    'name' => $quiz->title,
+                    'title' => $quiz->title,
                     'max_score' => 100,
+                    'weight' => 1.00,
                 ]
             );
     }

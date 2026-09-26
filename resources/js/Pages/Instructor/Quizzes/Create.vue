@@ -31,6 +31,15 @@ const isExam = ref(false)
 function toggleExam(v) {
   isExam.value = v
   form.is_exam = v
+
+  if (!v) {
+    form.start_date = ''
+    form.end_date = ''
+    form.grace_period = '0'
+    form.randomize_options = false
+    form.prevent_copy_paste = false
+    form.require_webcam = false
+  }
 }
 
 function toggleQuestion(id) {
@@ -94,11 +103,11 @@ function submit() {
             <VCol cols="6"><VTextField v-model="form.start_date" label="Start Date" variant="outlined" density="default" type="datetime-local" /></VCol>
             <VCol cols="6"><VTextField v-model="form.end_date" label="End Date" variant="outlined" density="default" type="datetime-local" /></VCol>
           </VRow>
-          <VTextField v-model="form.grace_period" label="Grace Period (minutes after end)" variant="outlined" density="default" type="number" min="0" />
+          <VTextField v-model="form.grace_period" label="Entry Grace Period (minutes)" variant="outlined" density="default" type="number" min="0" hint="Additional time allowed to start the exam after the start time" persistent-hint/>
           <div class="d-flex ga-4 mt-2">
             <VCheckbox v-model="form.randomize_options" label="Randomize Options" hide-details density="default" />
             <VCheckbox v-model="form.prevent_copy_paste" label="Prevent Copy & Paste" hide-details density="default" />
-            <VCheckbox v-model="form.require_webcam" label="Require Webcam" hide-details density="default" />
+            <!-- <VCheckbox v-model="form.require_webcam" label="Require Webcam" hide-details density="default" /> -->
           </div>
         </VCard>
 

@@ -1,7 +1,47 @@
 <script setup>
-defineProps({
-  enrollments: { type: Array, default: () => [] },
+import { computed } from 'vue'
+
+const props = defineProps({
+  enrollments: {
+    type: Array,
+    default: () => [],
+  },
 })
+
+const activeTab = ref('my-learning')
+
+const getProgress = enrollment => {
+  const totalCourses =
+    enrollment?.learning_path?.courses?.length || 0
+
+  const completedCourses =
+    Number(enrollment?.completed_count) || 0
+
+  if (
+    typeof enrollment?.progress === 'number' ||
+    typeof enrollment?.progress === 'string'
+  ) {
+    const progress = Number(enrollment.progress)
+
+    if (Number.isFinite(progress)) {
+      return Math.min(
+        100,
+        Math.max(0, progress),
+      )
+    }
+  }
+
+  if (totalCourses > 0) {
+    return Math.min(
+      100,
+      Math.round(
+        (completedCourses / totalCourses) * 100,
+      ),
+    )
+  }
+
+  return 0
+}
 </script>
 
 <template>
@@ -11,13 +51,21 @@ defineProps({
       <p class="text-body-1 text-medium-emphasis">Track your progress and continue learning</p>
     </div>
 
-    <VTabs color="primary" class="mb-6">
-      <VTab :href="route('student.learning-paths.index')">
+    <VTabs
+      v-model="activeTab"
+      color="primary"
+      class="mb-6"
+    >
+      <VTab
+        value="all-paths"
+        :href="route('student.learning-paths.index')"
+      >
         All Paths
       </VTab>
+
       <VTab
+        value="my-learning"
         :href="route('student.learning-paths.my-paths')"
-        :active="true"
       >
         My Learning
       </VTab>
@@ -40,10 +88,10 @@ defineProps({
             <div class="mb-4">
               <div class="d-flex justify-space-between mb-1">
                 <span class="text-body-2 font-weight-medium">Overall Progress</span>
-                <span class="text-h6 font-weight-bold text-purple">{{ enrollment.progress ?? enrollment.getProgress?.() ?? 0 }}%</span>
+                <span class="text-h6 font-weight-bold text-purple">{{ getProgress(enrollment) }}%</span>
               </div>
               <VProgressLinear
-                :model-value="enrollment.progress ?? enrollment.getProgress?.() ?? 0"
+                :model-value="getProgress(enrollment)"
                 color="purple"
                 height="8"
                 rounded

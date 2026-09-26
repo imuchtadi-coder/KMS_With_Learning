@@ -30,8 +30,8 @@ const form = useForm({
         <VTextarea v-model="form.instructions" label="Instructions" variant="outlined" density="default" rows="4" hint="Detailed instructions for students" persistent-hint />
         <VSelect v-model="form.section_id" label="Section" variant="outlined" density="default" :items="(course.sections || []).map(s => ({ title: s.title, value: s.id }))" :rules="[v => !!v || 'Section is required']" hide-details="auto" />
         <VRow>
-          <VCol cols="4"><VTextField v-model="form.max_score" label="Max Score" variant="outlined" density="default" type="number" min="1" /></VCol>
-          <VCol cols="4"><VTextField v-model="form.passing_grade" label="Passing Grade (%)" variant="outlined" density="default" type="number" min="0" max="100" /></VCol>
+          <VCol cols="3"><VTextField v-model="form.max_score" label="Max Score" variant="outlined" density="default" type="number" min="1" /></VCol>
+          <VCol cols="3"><VTextField v-model="form.passing_grade" label="Passing Grade (%)" variant="outlined" density="default" type="number" min="0" max="100" /></VCol>
           <VCol cols="4"><VTextField v-model="form.deadline" label="Deadline" variant="outlined" density="default" type="datetime-local"/></VCol>
         </VRow>
         <VTextField v-model="form.file_types" label="Allowed File Types" variant="outlined" density="default" hint="e.g., pdf,doc,docx,zip" persistent-hint />

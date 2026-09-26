@@ -12,14 +12,19 @@ use App\Models\Quiz;
 use App\Models\Assignment;
 use App\Models\Category;
 use App\Models\Tag;
-use App\Notifications\CourseCompleted;
 use App\Services\GamificationService;
+use App\Services\CourseCompletionService;
 use App\Notifications\EnrollmentConfirmation;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
 class StudentCourseController extends Controller
 {
+    public function __construct(
+        protected CourseCompletionService $courseCompletionService
+    ) {
+    }
+
     /**
      * Student Dashboard
      */
@@ -234,7 +239,13 @@ class StudentCourseController extends Controller
                 ->with('error', 'Enrollment not found.');
         }
 
-        $enrollment->load(['course.instructor', 'course.sections.lessons']);
+        $enrollment->load([
+            'course.instructor',
+            'course.sections.lessons.videos',
+            'course.sections.lessons.progresses' => function ($query) use ($user) {
+                $query->where('user_id', $user->id);
+            },
+        ]);
 
         // Calculate progress
         $course = $enrollment->course;
@@ -266,7 +277,12 @@ class StudentCourseController extends Controller
         $user = auth()->user();
 
         // Check enrollment
-        if (!$course->enrollments()->where('user_id', $user->id)->exists()) {
+        if (
+            ! $course->enrollments()
+                ->where('user_id', $user->id)
+                ->where('status', 'active')
+                ->exists()
+        ) {
             abort(403, 'Not enrolled in this course');
         }
 
@@ -323,42 +339,84 @@ class StudentCourseController extends Controller
     {
         $user = auth()->user();
 
-        // Check if user is enrolled in the course
+        /*
+        * =========================================================
+        * CHECK ENROLLMENT
+        * =========================================================
+        */
         $course = $lesson->section->course;
-        if (!$course->enrollments()->where('user_id', $user->id)->exists()) {
+
+        if (
+            ! $course->enrollments()
+                ->where('user_id', $user->id)
+                ->where('status', 'active')
+                ->exists()
+        ) {
             abort(403, 'Not enrolled in this course');
         }
 
-        // Create or update progress
-        $progress = Progress::updateOrCreate(
-            ['user_id' => $user->id, 'lesson_id' => $lesson->id],
+        /*
+        * =========================================================
+        * COMPLETE LESSON
+        * =========================================================
+        *
+        * Controller hanya bertanggung jawab mengubah
+        * status progress lesson.
+        */
+        Progress::updateOrCreate(
+            [
+                'user_id' => $user->id,
+                'lesson_id' => $lesson->id,
+            ],
             [
                 'percentage' => 100,
                 'completed' => true,
-                'completed_at' => now()
+                'completed_at' => now(),
             ]
         );
 
-        // Check if all lessons in course are completed and generate certificate if needed
-        $allLessons = $course->sections()->with('lessons')->get()->flatMap->lessons;
-        $completedLessons = Progress::where('user_id', $user->id)
-            ->whereIn('lesson_id', $allLessons->pluck('id'))
-            ->where('completed', true)
-            ->count();
+        /*
+        * =========================================================
+        * COURSE COMPLETION
+        * =========================================================
+        *
+        * Semua logic:
+        * - cek seluruh lesson
+        * - enrollment.completed_at
+        * - certificate
+        * - notification
+        * - course completion points
+        * - badges
+        *
+        * ditangani oleh CourseCompletionService.
+        */
+        $this->courseCompletionService
+            ->completeEnrollmentIfEligible(
+                $course,
+                $user->id
+            );
 
-        if ($completedLessons === $allLessons->count()) {
-            // All lessons completed - generate certificate
-            \App\Http\Controllers\CertificateController::generateIfEligible($user->id, $course->id);
-            $user->notify(new CourseCompleted($course));
-            app(GamificationService::class)->awardPoints($user, 'course_completed', $course->id);
-            app(GamificationService::class)->checkBadges($user);
-        }
+        /*
+        * =========================================================
+        * LESSON COMPLETION GAMIFICATION
+        * =========================================================
+        *
+        * Ini bukan course-completion side effect.
+        * Tetap dijalankan setiap kali lesson berhasil
+        * ditandai completed.
+        */
+        app(GamificationService::class)->awardPoints(
+            $user,
+            'lesson_completed',
+            $course->id
+        );
 
-        app(GamificationService::class)->awardPoints($user, 'lesson_completed', $course->id);
         app(GamificationService::class)->updateStreak($user);
+
         app(GamificationService::class)->checkBadges($user);
 
-        return redirect()->back()->with('success', 'Lesson marked as complete!');
+        return redirect()
+            ->back()
+            ->with('success', 'Lesson marked as complete!');
     }
-
 }

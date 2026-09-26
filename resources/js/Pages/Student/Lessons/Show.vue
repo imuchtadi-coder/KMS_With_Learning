@@ -33,6 +33,10 @@ const readyVideo = computed(() => {
   return props.lesson.videos?.find(v => v.status === 'ready')
 })
 
+console.log('LESSON:', props.lesson)
+console.log('VIDEOS:', props.lesson?.videos)
+console.log('READY VIDEO:', readyVideo.value)
+
 /*
  * Progress yang sudah tersimpan dari server.
  *
@@ -163,22 +167,31 @@ async function saveProgress(watchedSeconds, duration = 0) {
 
   try {
     const response = await axios.post(
-      `/student/courses/${props.course.id}/lessons/${props.lesson.id}/progress`,
+      route('student.lessons.update-progress'),
       {
+        lesson_id: props.lesson.id,
         watched_seconds: maximumWatched,
         total_seconds: totalSeconds.value,
       },
     )
 
     /*
-     * Hanya setelah server berhasil merespons,
-     * progress dianggap persisted.
+     * Backend mengembalikan progress di:
+     *
+     * response.data.progress
      */
+    const serverProgress =
+      response?.data?.progress ?? null
+
     const serverWatched = Number(
-      response?.data?.watched_seconds ??
+      serverProgress?.watched_seconds ??
       maximumWatched,
     )
 
+    /*
+     * Hanya setelah server berhasil merespons,
+     * progress dianggap persisted.
+     */
     lastPersistedWatched = Math.max(
       lastPersistedWatched,
       serverWatched,
@@ -190,11 +203,29 @@ async function saveProgress(watchedSeconds, duration = 0) {
       lastPersistedWatched,
     )
 
+    /*
+     * Update status lesson dari response backend.
+     */
     if (
-      response?.data?.completed !== undefined
+      serverProgress?.completed !== undefined
     ) {
       progressCompleted.value =
-        Boolean(response.data.completed)
+        Boolean(serverProgress.completed)
+    }
+
+    /*
+     * Informasi tambahan:
+     * apakah seluruh course sudah selesai.
+     *
+     * Tidak perlu mengubah UI lesson di sini karena
+     * enrollment.completed_at akan dibaca saat halaman
+     * enrollment dibuka kembali.
+     */
+    if (response?.data?.course_completed) {
+      console.log(
+        'Course completed:',
+        props.course.id,
+      )
     }
   } catch (error) {
     console.error(
@@ -854,8 +885,8 @@ function formatDate(date) {
             block
             :href="
               route(
-                'student.courses.show',
-                course.id,
+                'student.enrollments.show',
+                enrollment.id,
               )
             "
           >
@@ -863,7 +894,7 @@ function formatDate(date) {
               start
               icon="mdi-arrow-left"
             />
-            Back to Course
+            Back to Enrollment
           </VBtn>
         </VCardText>
       </VCard>
