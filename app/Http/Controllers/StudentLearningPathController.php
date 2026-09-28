@@ -140,7 +140,7 @@ class StudentLearningPathController extends Controller
             abort(404);
         }
 
-        $allCourses = $learningPath->courses()->pluck('course_id')->toArray();
+        $allCourses = $learningPath->courses()->pluck('courses_id')->toArray();
         $courseIndex = array_search($course->id, $allCourses);
 
         $previousCourses = array_slice($allCourses, 0, $courseIndex);

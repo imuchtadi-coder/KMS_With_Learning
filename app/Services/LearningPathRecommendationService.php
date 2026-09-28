@@ -90,7 +90,7 @@ class LearningPathRecommendationService
             return 50; // Neutral score for beginners
         }
 
-        $pathCourses = $path->courses()->pluck('id')->toArray();
+        $pathCourses = $path->courses()->pluck('course_id')->toArray();
 
         // Calculate overlap with completed courses
         $matchedCourses = count(array_intersect($studentCompletedCourses, $pathCourses));
@@ -112,7 +112,7 @@ class LearningPathRecommendationService
     private function getDifficultyProgressionScore(LearningPath $path, User $student)
     {
         // Get average difficulty of student's completed paths
-        $completedPaths = $student->enrollments()
+        $completedPaths = $student->learningPathEnrollments()
             ->whereNotNull('completed_at')
             ->with('learningPath')
             ->get()
@@ -218,7 +218,7 @@ class LearningPathRecommendationService
         $totalDuration = $path->courses()->count() * 4;
 
         // Get student's average learning duration
-        $completedPaths = $student->enrollments()
+        $completedPaths = $student->learningPathEnrollments()
             ->whereNotNull('completed_at')
             ->with('learningPath.courses')
             ->get();

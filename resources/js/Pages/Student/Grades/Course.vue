@@ -116,6 +116,14 @@ const typeColor = (type) => ({
       >
         Download Transcript (PDF)
       </VBtn>
+      <VBtn
+        color="secondary"
+        variant="tonal"
+        prepend-icon="mdi-arrow-left"
+        :href="route('student.grades.index')"
+      >
+        Back to Grades Overview
+      </VBtn>
     </div>
   </div>
 </template>

@@ -55,6 +55,11 @@ class User extends Authenticatable
     {
         return $this->hasMany(Enrollment::class);
     }
+    
+    public function learningPathEnrollments(): HasMany
+    {
+        return $this->hasMany(LearningPathEnrollment::class);
+    }
 
     public function tenant()
     {

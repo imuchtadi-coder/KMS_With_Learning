@@ -70,5 +70,15 @@ const statusColor = (status) => ({
       </VAlert>
       <p v-else class="text-body-2 text-medium-emphasis">This session has ended. No recording available.</p>
     </VCard>
+    <div class ="mt-6">
+      <VBtn
+        color="secondary"
+        variant="tonal"
+        prepend-icon="mdi-arrow-left"
+        :href="route('student.live-classes.index')"
+      >
+        Back to Live Classes
+      </VBtn>
+    </div>
   </div>
 </template>

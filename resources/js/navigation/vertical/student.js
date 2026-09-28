@@ -1,11 +1,11 @@
 export default [
-  {
-    title: 'Learning',
-    icon: { icon: 'tabler-player-play' },
-    href: '/student',
-    action: 'student',
-    subject: 'role',
-  },
+  // {
+  //   title: 'Learning',
+  //   icon: { icon: 'tabler-player-play' },
+  //   href: '/student',
+  //   action: 'student',
+  //   subject: 'role',
+  // },
   {
     title: 'Courses',
     icon: { icon: 'tabler-book' },
