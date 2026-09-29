@@ -40,13 +40,13 @@ const deletePath = (pathId) => {
             <td class="font-weight-medium">{{ path.title }}</td>
             <td>{{ path.courses?.length || 0 }}</td>
             <td>
-              <VChip
-                :color="path.published ? 'success' : 'warning'"
-                size="x-small"
-                variant="tonal"
-                label
+              <VChip 
+                :color="path.published_at ? 'success' : 'warning'" 
+                size="x-small" 
+                variant="tonal" 
+                label 
               >
-                {{ path.published ? 'Published' : 'Draft' }}
+                {{ path.published_at ? 'Published' : 'Draft' }}
               </VChip>
             </td>
             <td class="text-caption">{{ new Date(path.created_at).toLocaleDateString() }}</td>

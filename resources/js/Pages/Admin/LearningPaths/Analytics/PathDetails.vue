@@ -11,7 +11,7 @@ defineProps({
         <h4 class="text-h4 font-weight-bold mb-1">{{ analytics.path?.title }}</h4>
         <p class="text-body-2 text-medium-emphasis">Path Analytics Details</p>
       </div>
-      <VBtn variant="outlined" :href="route('admin.learning-paths.analytics.dashboard')">Back</VBtn>
+      <VBtn variant="outlined" :href="route('admin.learning-paths.show', analytics.path?.id)">Back</VBtn>
     </div>
 
     <VRow class="mb-6">
