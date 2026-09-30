@@ -15,6 +15,7 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use App\Traits\HasTenantStorage;
 use Inertia\Inertia;
+use App\Models\Certificate;
 
 class InstructorCourseController extends Controller
 {
@@ -232,21 +233,155 @@ class InstructorCourseController extends Controller
     public function progress($courseId)
     {
         $course = Course::findOrFail($courseId);
-        $user = auth()->user();
-        if (!($user->id === $course->created_by && $user->tenant_id === $course->tenant_id) && !$user->hasRole('tenant_admin')) abort(403);
 
-        $course->load(['sections.lessons', 'enrollments.user']);
-        $allLessonIds = $course->sections->flatMap->lessons->pluck('id');
+        $user = auth()->user();
+
+        if (
+            !(
+                $user->id === $course->created_by &&
+                $user->tenant_id === $course->tenant_id
+            ) &&
+            !$user->hasRole('tenant_admin')
+        ) {
+            abort(403);
+        }
+
+        $course->load([
+            'sections.lessons',
+            'enrollments.user',
+        ]);
+
+        $allLessonIds = $course->sections
+            ->flatMap->lessons
+            ->pluck('id');
+
         $totalLessons = $allLessonIds->count();
 
-        $enrollments = $course->enrollments->map(function ($enrollment) use ($allLessonIds, $totalLessons) {
-            $completedCount = Progress::where('user_id', $enrollment->user_id)->whereIn('lesson_id', $allLessonIds)->where('completed', true)->count();
+        $enrollments = $course->enrollments->map(function ($enrollment) use (
+            $allLessonIds,
+            $totalLessons
+        ) {
+            $completedCount = Progress::where('user_id', $enrollment->user_id)
+                ->whereIn('lesson_id', $allLessonIds)
+                ->where('completed', true)
+                ->count();
+
+            $certificate = Certificate::where('user_id', $enrollment->user_id)
+                ->where('course_id', $enrollment->course_id)
+                ->first();
+
             $enrollment->completed_lessons = $completedCount;
             $enrollment->total_lessons = $totalLessons;
-            $enrollment->progress_percentage = $totalLessons > 0 ? round(($completedCount / $totalLessons) * 100) : 0;
+
+            $enrollment->progress_percentage = $totalLessons > 0
+                ? round(($completedCount / $totalLessons) * 100)
+                : 0;
+
+            $enrollment->is_completed =
+                $enrollment->status === 'completed' ||
+                $enrollment->completed_at !== null;
+
+            $enrollment->has_certificate = $certificate !== null;
+
+            $enrollment->certificate = $certificate;
+
             return $enrollment;
         });
 
-        return Inertia::render('Instructor/Courses/Progress', compact('course', 'enrollments', 'totalLessons'));
+        return Inertia::render(
+            'Instructor/Courses/Progress',
+            compact(
+                'course',
+                'enrollments',
+                'totalLessons'
+            )
+        );
+    }
+
+    public function approveCertificate($courseId, $enrollmentId)
+    {
+        $course = Course::findOrFail($courseId);
+
+        $user = auth()->user();
+
+        /*
+        * =========================================================
+        * AUTHORIZATION
+        * =========================================================
+        */
+        if (
+            !(
+                $user->id === $course->created_by &&
+                $user->tenant_id === $course->tenant_id
+            ) &&
+            !$user->hasRole('tenant_admin')
+        ) {
+            abort(403);
+        }
+
+        /*
+        * =========================================================
+        * GET ENROLLMENT
+        * =========================================================
+        */
+        $enrollment = Enrollment::with('user')
+            ->where('id', $enrollmentId)
+            ->where('course_id', $course->id)
+            ->firstOrFail();
+
+        /*
+        * =========================================================
+        * CHECK COURSE COMPLETION
+        * =========================================================
+        */
+        if (
+            $enrollment->status !== 'completed' &&
+            $enrollment->completed_at === null
+        ) {
+            return back()->with(
+                'error',
+                'Student has not completed this course.'
+            );
+        }
+
+        /*
+        * =========================================================
+        * CHECK EXISTING CERTIFICATE
+        * =========================================================
+        */
+        $existingCertificate = Certificate::where('user_id', $enrollment->user_id)
+            ->where('course_id', $course->id)
+            ->first();
+
+        if ($existingCertificate) {
+            return back()->with(
+                'success',
+                'Certificate has already been issued.'
+            );
+        }
+
+        /*
+        * =========================================================
+        * CREATE CERTIFICATE
+        * =========================================================
+        */
+        $certificate = Certificate::create([
+            'user_id' => $enrollment->user_id,
+            'course_id' => $course->id,
+            'certificate_number' => Certificate::generateCertificateNumber(),
+            'issued_at' => now(),
+        ]);
+
+        /*
+        * =========================================================
+        * GENERATE PDF
+        * =========================================================
+        */
+        CertificateController::generatePDF($certificate);
+
+        return back()->with(
+            'success',
+            'Certificate issued successfully.'
+        );
     }
 }

@@ -12,19 +12,15 @@ use App\Models\Quiz;
 use App\Models\Assignment;
 use App\Models\Category;
 use App\Models\Tag;
+// use App\Notifications\CourseCompleted;
 use App\Services\GamificationService;
-use App\Services\CourseCompletionService;
 use App\Notifications\EnrollmentConfirmation;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
+use App\Services\CourseCompletionService;
 
 class StudentCourseController extends Controller
 {
-    public function __construct(
-        protected CourseCompletionService $courseCompletionService
-    ) {
-    }
-
     /**
      * Student Dashboard
      */
@@ -239,13 +235,7 @@ class StudentCourseController extends Controller
                 ->with('error', 'Enrollment not found.');
         }
 
-        $enrollment->load([
-            'course.instructor',
-            'course.sections.lessons.videos',
-            'course.sections.lessons.progresses' => function ($query) use ($user) {
-                $query->where('user_id', $user->id);
-            },
-        ]);
+        $enrollment->load(['course.instructor', 'course.sections.lessons']);
 
         // Calculate progress
         $course = $enrollment->course;
@@ -277,12 +267,7 @@ class StudentCourseController extends Controller
         $user = auth()->user();
 
         // Check enrollment
-        if (
-            ! $course->enrollments()
-                ->where('user_id', $user->id)
-                ->where('status', 'active')
-                ->exists()
-        ) {
+        if (!$course->enrollments()->where('user_id', $user->id)->exists()) {
             abort(403, 'Not enrolled in this course');
         }
 
@@ -332,6 +317,11 @@ class StudentCourseController extends Controller
         ));
     }
 
+    public function __construct(
+        protected CourseCompletionService $courseCompletionService
+    ) {
+    }
+
     /**
      * Mark lesson as complete
      */
@@ -359,9 +349,6 @@ class StudentCourseController extends Controller
         * =========================================================
         * COMPLETE LESSON
         * =========================================================
-        *
-        * Controller hanya bertanggung jawab mengubah
-        * status progress lesson.
         */
         Progress::updateOrCreate(
             [
@@ -380,15 +367,16 @@ class StudentCourseController extends Controller
         * COURSE COMPLETION
         * =========================================================
         *
-        * Semua logic:
+        * CourseCompletionService bertanggung jawab untuk:
         * - cek seluruh lesson
-        * - enrollment.completed_at
-        * - certificate
+        * - mengubah enrollment menjadi completed
+        * - completed_at
         * - notification
         * - course completion points
         * - badges
         *
-        * ditangani oleh CourseCompletionService.
+        * Certificate TIDAK dibuat di sini.
+        * Certificate hanya dibuat setelah instructor approve.
         */
         $this->courseCompletionService
             ->completeEnrollmentIfEligible(
@@ -400,10 +388,6 @@ class StudentCourseController extends Controller
         * =========================================================
         * LESSON COMPLETION GAMIFICATION
         * =========================================================
-        *
-        * Ini bukan course-completion side effect.
-        * Tetap dijalankan setiap kali lesson berhasil
-        * ditandai completed.
         */
         app(GamificationService::class)->awardPoints(
             $user,
@@ -419,4 +403,5 @@ class StudentCourseController extends Controller
             ->back()
             ->with('success', 'Lesson marked as complete!');
     }
+
 }

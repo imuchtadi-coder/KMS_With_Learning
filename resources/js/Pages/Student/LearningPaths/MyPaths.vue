@@ -1,5 +1,5 @@
 <script setup>
-import { computed } from 'vue'
+import { ref } from 'vue'
 
 const props = defineProps({
   enrollments: {
@@ -80,9 +80,18 @@ const getProgress = enrollment => {
         lg="4"
       >
         <VCard flat border>
-          <div class="pa-6 bg-purple text-white rounded-t">
-            <h5 class="text-h5 text-white font-weight-bold">{{ enrollment.learning_path?.title }}</h5>
-            <p class="text-body-2 text-white opacity-75 mt-1">{{ enrollment.learning_path?.courses?.length || 0 }} courses</p>
+          <div class="pa-6 bg-primary text-white rounded-t"
+          >
+            <h5
+              class="text-h5 font-weight-bold"
+              style="color: white !important;"
+            >
+              {{ enrollment.learning_path?.title }}
+            </h5>
+
+            <p style="color: white !important;">
+              {{ enrollment.learning_path?.courses?.length || 0 }} courses
+            </p>
           </div>
           <VCardText>
             <div class="mb-4">

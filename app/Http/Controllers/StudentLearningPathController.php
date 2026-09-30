@@ -187,7 +187,7 @@ class StudentLearningPathController extends Controller
     public function myPaths()
     {
         $user = auth()->user();
-        $tenantId = auth()->user()->tenant_id;
+        $tenantId = $user->tenant_id;
 
         $enrollments = LearningPathEnrollment::with([
             'learningPath.courses',
@@ -196,11 +196,34 @@ class StudentLearningPathController extends Controller
             ->where('user_id', $user->id)
             ->where('tenant_id', $tenantId)
             ->get()
-            ->each(function ($enrollment) {
-                $total = $enrollment->learningPath?->courses->count() ?: 1;
-                $completed = $enrollment->progress->whereNotNull('completed_at')->count();
-                $enrollment->setAttribute('progress', (int) round(($completed / $total) * 100));
-                $enrollment->setAttribute('completed_count', $completed);
+            ->map(function ($enrollment) {
+                $total = $enrollment->learningPath?->courses->count() ?? 0;
+
+                $completed = $enrollment->progress
+                    ->whereNotNull('completed_at')
+                    ->count();
+
+                $progress = $total > 0
+                    ? (int) round(($completed / $total) * 100)
+                    : 0;
+
+                return [
+                    'id' => $enrollment->id,
+                    'started_at' => $enrollment->started_at,
+                    'completed_at' => $enrollment->completed_at,
+
+                    'completed_count' => $completed,
+                    'progress' => $progress,
+
+                    'learning_path' => $enrollment->learningPath
+                        ? [
+                            'id' => $enrollment->learningPath->id,
+                            'title' => $enrollment->learningPath->title,
+
+                            'courses' => $enrollment->learningPath->courses,
+                        ]
+                        : null,
+                ];
             });
 
         return Inertia::render('Student/LearningPaths/MyPaths', [

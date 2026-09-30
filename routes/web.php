@@ -246,6 +246,9 @@ Route::middleware('auth')->group(function () {
         Route::delete('/instructor/courses/{course}/live-classes/{liveClass}', [InstructorLiveClassController::class, 'destroy'])->name('instructor.live-classes.destroy');
         Route::post('/instructor/courses/{course}/live-classes/{liveClass}/start', [InstructorLiveClassController::class, 'startMeeting'])->name('instructor.live-classes.start');
         Route::post('/instructor/courses/{course}/live-classes/{liveClass}/end', [InstructorLiveClassController::class, 'endMeeting'])->name('instructor.live-classes.end');
+
+        // Certificates Aproval
+        Route::post('/instructor/courses/{course}/enrollments/{enrollment}/certificate', [InstructorCourseController::class, 'approveCertificate'])->name('instructor.courses.enrollments.certificate');
     });
 
     // Notification routes (all authenticated users)
@@ -281,7 +284,7 @@ Route::middleware('auth')->group(function () {
         Route::get('/student/courses/{course}/lessons/{lesson}', [StudentCourseController::class, 'viewLesson'])->name('student.lessons.view');
         Route::post('/student/lessons/{lesson}/complete', [StudentCourseController::class, 'completeLesson'])->name('student.lessons.complete');
         Route::post('/student/lessons/update-progress', [ProgressController::class, 'update'])->name('student.lessons.update-progress');
-
+        
         // Learning Paths
         Route::get('/student/learning-paths', [StudentLearningPathController::class, 'index'])->name('student.learning-paths.index');
         Route::get('/student/learning-paths/my-paths', [StudentLearningPathController::class, 'myPaths'])->name('student.learning-paths.my-paths');

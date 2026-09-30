@@ -588,8 +588,8 @@ function formatDate(date) {
             </VList>
           </div>
 
-          <!-- //Mark as Complete
-          <div
+          <!-- Mark as Complete -->
+          <!-- <div
             v-if="!progressCompleted"
             class="mt-4"
           >
@@ -952,3 +952,4 @@ function formatDate(date) {
   display: block;
 }
 </style>
+<!-- POWERSELL TEST 12345 -->

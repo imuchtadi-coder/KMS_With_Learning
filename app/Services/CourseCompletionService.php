@@ -2,7 +2,7 @@
 
 namespace App\Services;
 
-use App\Http\Controllers\CertificateController;
+// use App\Http\Controllers\CertificateController;
 use App\Models\Course;
 use App\Models\Enrollment;
 use App\Models\Lesson;
@@ -91,6 +91,7 @@ class CourseCompletionService
             ->where('status', 'active')
             ->whereNull('completed_at')
             ->update([
+                'status' => 'completed',
                 'completed_at' => now(),
             ]) > 0;
 
@@ -113,13 +114,13 @@ class CourseCompletionService
          * menjalankan seluruh side effect.
          */
 
-        /*
-         * Certificate
-         */
-        CertificateController::generateIfEligible(
-            $userId,
-            $course->id
-        );
+        // /*
+        //  * Certificate trigger ini dimatikan, untuktidak dibuat otomatis
+        //  */
+        // CertificateController::generateIfEligible(
+        //     $userId,
+        //     $course->id
+        // );
 
         /*
          * Notification
