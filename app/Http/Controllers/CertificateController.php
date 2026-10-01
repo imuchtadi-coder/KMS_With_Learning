@@ -63,12 +63,89 @@ class CertificateController extends Controller
         $user = $certificate->user;
         $course = $certificate->course;
 
+        $course->loadMissing(['instructor', 'tenant.branding',]);
+
+        $tenant = $course->tenant;
+        $branding = $tenant?->branding;
+
+        $certificateLogo = null;
+        $certificateLogoWidth = null;
+        $certificateLogoHeight = null;
+
+        if (
+            $branding?->certificate_logo_path &&
+            Storage::disk('public')->exists($branding->certificate_logo_path)
+        ) {
+            $certificateLogo = Storage::disk('public')
+                ->path($branding->certificate_logo_path);
+        } elseif (
+            $branding?->logo_path &&
+            Storage::disk('public')->exists($branding->logo_path)
+        ) {
+            $certificateLogo = Storage::disk('public')
+                ->path($branding->logo_path);
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | ADAPTIVE LOGO SIZE
+        |--------------------------------------------------------------------------
+        */
+
+        if ($certificateLogo && is_file($certificateLogo)) {
+            $imageSize = @getimagesize($certificateLogo);
+
+            if ($imageSize && $imageSize[0] > 0 && $imageSize[1] > 0) {
+
+                $imageWidth = $imageSize[0];
+                $imageHeight = $imageSize[1];
+
+
+                $maxWidth = 55;
+                $maxHeight = 22;
+
+                $scale = min(
+                    $maxWidth / $imageWidth,
+                    $maxHeight / $imageHeight
+                );
+
+                $certificateLogoWidth = round(
+                    $imageWidth * $scale,
+                    2
+                );
+
+                $certificateLogoHeight = round(
+                    $imageHeight * $scale,
+                    2
+                );
+            }
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | RENDER CERTIFICATE
+        |--------------------------------------------------------------------------
+        */
+
         $html = view('certificates.template', [
             'user' => $user,
             'course' => $course,
             'certificate' => $certificate,
+            'tenant' => $tenant,
+            'branding' => $branding,
+
+            'certificate_logo' => $certificateLogo,
+            'certificate_logo_width' => $certificateLogoWidth,
+            'certificate_logo_height' => $certificateLogoHeight,
+
             'issued_date' => $certificate->issued_at->format('F d, Y'),
         ])->render();
+
+        /*
+        |--------------------------------------------------------------------------
+        | GENERATE PDF
+        |--------------------------------------------------------------------------
+        */
 
         $pdf = Pdf::loadHTML($html)
             ->setPaper('a4', 'landscape')
@@ -77,13 +154,22 @@ class CertificateController extends Controller
             ->setOption('margin-left', 0)
             ->setOption('margin-right', 0);
 
+        /*
+        |--------------------------------------------------------------------------
+        | SAVE PDF
+        |--------------------------------------------------------------------------
+        */
+
         $filename = self::tenantPath(
             "certificates/{$certificate->user_id}/{$certificate->course_id}.pdf",
             $certificate->course->tenant_id
         );
+
         Storage::put($filename, $pdf->output());
 
-        $certificate->update(['pdf_path' => $filename]);
+        $certificate->update([
+            'pdf_path' => $filename,
+        ]);
     }
 
     /**

@@ -78,7 +78,7 @@
         |--------------------------------------------------------------------------
         */
 
-        .corner-top-left {
+        /* .corner-top-left {
             position: absolute;
             top: 0;
             left: 0;
@@ -155,7 +155,7 @@
             background: #faf9f4;
 
             border-top-left-radius: 62mm;
-        }
+        } */
 
 
         /*
@@ -166,7 +166,7 @@
 
         .brand {
             position: absolute;
-            top: 20mm;
+            top: 18mm;
             left: 0;
             right: 0;
 
@@ -200,7 +200,7 @@
 
         .title-section {
             position: absolute;
-            top: 34mm;
+            top: 48mm;
             left: 30mm;
             right: 30mm;
 
@@ -243,7 +243,7 @@
 
         .content {
             position: absolute;
-            top: 65mm;
+            top: 76mm;
             left: 35mm;
             right: 35mm;
 
@@ -490,6 +490,11 @@
             z-index: 5;
         }
 
+        .certificate-logo {
+            display: block;
+            margin: 0 auto;
+        }
+
     </style>
 </head>
 
@@ -533,9 +538,24 @@
 
     <div class="brand">
 
-        <div class="brand-name">
-            KITSuluh
-        </div>
+        <?php if (!empty($certificate_logo)): ?>
+
+            <img
+                src="file://<?= htmlspecialchars($certificate_logo) ?>"
+                class="certificate-logo"
+                style="
+                    width: <?= $certificate_logo_width ?>mm;
+                    height: <?= $certificate_logo_height ?>mm;
+                "
+            >
+
+        <?php elseif (!empty($tenant?->name)): ?>
+
+            <div class="brand-name">
+                <?= htmlspecialchars($tenant->name) ?>
+            </div>
+
+        <?php endif; ?>
 
         <div class="brand-line"></div>
 

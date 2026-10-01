@@ -5,9 +5,12 @@ namespace App\Http\Controllers;
 use App\Models\Course;
 use App\Models\Tenant;
 use App\Models\User;
+use App\Models\TenantBranding;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules\Password;
 use Inertia\Inertia;
@@ -30,7 +33,11 @@ class AdminController extends Controller
             $totalAdmins = User::where('tenant_id', $user->tenant_id)->role('tenant_admin')->count();
             $totalInstructors = User::where('tenant_id', $user->tenant_id)->role('instructor')->count();
             $totalStudents = User::where('tenant_id', $user->tenant_id)->role('student')->count();
-            $recentUsers = User::where('tenant_id', $user->tenant_id)->with('roles')->latest()->take(5)->get();
+            $recentUsers = User::where('tenant_id', $user->tenant_id)
+                ->with('roles')
+                ->latest()
+                ->take(5)
+                ->get();
         } else {
             // For super admin, show all stats
             $totalUsers = User::count();
@@ -40,7 +47,16 @@ class AdminController extends Controller
             $recentUsers = User::with('roles')->latest()->take(5)->get();
         }
 
-        return Inertia::render('Admin/Dashboard', compact('totalUsers', 'totalAdmins', 'totalInstructors', 'totalStudents', 'recentUsers'));
+        return Inertia::render(
+            'Admin/Dashboard',
+            compact(
+                'totalUsers',
+                'totalAdmins',
+                'totalInstructors',
+                'totalStudents',
+                'recentUsers'
+            )
+        );
     }
 
     /**
@@ -99,7 +115,10 @@ class AdminController extends Controller
             ? Tenant::where('id', $authUser->tenant_id)->get()
             : Tenant::all();
 
-        return Inertia::render('Admin/Users/Create', compact('roles', 'tenants'));
+        return Inertia::render(
+            'Admin/Users/Create',
+            compact('roles', 'tenants')
+        );
     }
 
     /**
@@ -165,18 +184,28 @@ class AdminController extends Controller
         $authUser = auth()->user();
 
         // Tenant admin can only edit users in their tenant
-        if ($authUser->hasRole('tenant_admin') && $user->tenant_id !== $authUser->tenant_id) {
+        if (
+            $authUser->hasRole('tenant_admin') &&
+            $user->tenant_id !== $authUser->tenant_id
+        ) {
             abort(403, 'Unauthorized');
         }
 
         $roles = $authUser->hasRole('tenant_admin')
-            ? Role::whereIn('name', ['tenant_admin', 'instructor', 'student'])->get()
+            ? Role::whereIn(
+                'name',
+                ['tenant_admin', 'instructor', 'student']
+            )->get()
             : Role::all();
-        $tenants = $authUser->hasRole('tenant_admin') ?
-                  Tenant::where('id', $authUser->tenant_id)->get() :
-                  Tenant::all();
 
-        return Inertia::render('Admin/Users/Edit', compact('user', 'roles', 'tenants'));
+        $tenants = $authUser->hasRole('tenant_admin')
+            ? Tenant::where('id', $authUser->tenant_id)->get()
+            : Tenant::all();
+
+        return Inertia::render(
+            'Admin/Users/Edit',
+            compact('user', 'roles', 'tenants')
+        );
     }
 
     /**
@@ -187,12 +216,22 @@ class AdminController extends Controller
         $authUser = auth()->user();
 
         // Tenant admin can only update users in their tenant
-        if ($authUser->hasRole('tenant_admin') && $user->tenant_id !== $authUser->tenant_id) {
+        if (
+            $authUser->hasRole('tenant_admin') &&
+            $user->tenant_id !== $authUser->tenant_id
+        ) {
             abort(403, 'Unauthorized');
         }
+
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
-            'email' => ['required', 'email', 'unique:users,email,'.$user->id],
+
+            'email' => [
+                'required',
+                'email',
+                'unique:users,email,' . $user->id,
+            ],
+
             'role' => [
                 'required',
                 'string',
@@ -200,6 +239,7 @@ class AdminController extends Controller
                     ? Rule::in(['tenant_admin', 'instructor', 'student'])
                     : Rule::exists('roles', 'name'),
             ],
+
             'tenant_id' => [
                 'required',
                 'string',
@@ -207,6 +247,7 @@ class AdminController extends Controller
                     ? Rule::in([$authUser->tenant_id])
                     : Rule::exists('tenants', 'id'),
             ],
+
             'password' => ['nullable', 'min:8'],
             'phone' => ['nullable', 'string', 'max:20'],
             'birthday' => ['nullable', 'date', 'before:today'],
@@ -234,7 +275,8 @@ class AdminController extends Controller
         // Update role
         $user->syncRoles($validated['role']);
 
-        return redirect()->route('admin.users.index')
+        return redirect()
+            ->route('admin.users.index')
             ->with('success', 'User updated successfully!');
     }
 
@@ -246,14 +288,19 @@ class AdminController extends Controller
         $authUser = auth()->user();
 
         // Tenant admin can only delete users in their tenant
-        if ($authUser->hasRole('tenant_admin') && $user->tenant_id !== $authUser->tenant_id) {
+        if (
+            $authUser->hasRole('tenant_admin') &&
+            $user->tenant_id !== $authUser->tenant_id
+        ) {
             abort(403, 'Unauthorized');
         }
 
         $userName = $user->name;
+
         $user->delete();
 
-        return redirect()->route('admin.users.index')
+        return redirect()
+            ->route('admin.users.index')
             ->with('success', "User '$userName' deleted successfully!");
     }
 
@@ -270,7 +317,10 @@ class AdminController extends Controller
             ->with(['instructor', 'sections'])
             ->paginate(10);
 
-        return Inertia::render('Admin/Courses/Index', compact('courses'));
+        return Inertia::render(
+            'Admin/Courses/Index',
+            compact('courses')
+        );
     }
 
     /**
@@ -285,9 +335,15 @@ class AdminController extends Controller
             abort(403, 'Unauthorized');
         }
 
-        $course->load(['instructor', 'sections.lessons.videos']);
+        $course->load([
+            'instructor',
+            'sections.lessons.videos',
+        ]);
 
-        return Inertia::render('Admin/Courses/Show', compact('course'));
+        return Inertia::render(
+            'Admin/Courses/Show',
+            compact('course')
+        );
     }
 
     /**
@@ -302,9 +358,16 @@ class AdminController extends Controller
             abort(403);
         }
 
-        $course->update(['published' => true]);
+        $course->update([
+            'published' => true,
+        ]);
 
-        return redirect()->back()->with('success', "Course '{$course->title}' published successfully!");
+        return redirect()
+            ->back()
+            ->with(
+                'success',
+                "Course '{$course->title}' published successfully!"
+            );
     }
 
     /**
@@ -319,9 +382,16 @@ class AdminController extends Controller
             abort(403);
         }
 
-        $course->update(['published' => false]);
+        $course->update([
+            'published' => false,
+        ]);
 
-        return redirect()->back()->with('success', "Course '{$course->title}' unpublished successfully!");
+        return redirect()
+            ->back()
+            ->with(
+                'success',
+                "Course '{$course->title}' unpublished successfully!"
+            );
     }
 
     // ========== TENANT MANAGEMENT ==========
@@ -333,7 +403,10 @@ class AdminController extends Controller
     {
         $tenants = Tenant::with('domains')->paginate(10);
 
-        return Inertia::render('Admin/Tenants/Index', compact('tenants'));
+        return Inertia::render(
+            'Admin/Tenants/Index',
+            compact('tenants')
+        );
     }
 
     /**
@@ -365,8 +438,12 @@ class AdminController extends Controller
             'domain' => $validated['domain'],
         ]);
 
-        return redirect()->route('admin.tenants.index')
-            ->with('success', "Tenant '{$validated['name']}' created successfully!");
+        return redirect()
+            ->route('admin.tenants.index')
+            ->with(
+                'success',
+                "Tenant '{$validated['name']}' created successfully!"
+            );
     }
 
     /**
@@ -374,7 +451,10 @@ class AdminController extends Controller
      */
     public function editTenant(Tenant $tenant)
     {
-        return Inertia::render('Admin/Tenants/Edit', compact('tenant'));
+        return Inertia::render(
+            'Admin/Tenants/Edit',
+            compact('tenant')
+        );
     }
 
     /**
@@ -384,16 +464,30 @@ class AdminController extends Controller
     {
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
-            'domain' => ['required', 'string', 'unique:domains,domain,'.($tenant->domains()->first()?->id ?? 0)],
+
+            'domain' => [
+                'required',
+                'string',
+                'unique:domains,domain,' .
+                ($tenant->domains()->first()?->id ?? 0),
+            ],
         ]);
 
-        $tenant->update(['name' => $validated['name']]);
+        $tenant->update([
+            'name' => $validated['name'],
+        ]);
+
         if ($tenant->domains()->first()) {
-            $tenant->domains()->first()->update(['domain' => $validated['domain']]);
+            $tenant->domains()
+                ->first()
+                ->update([
+                    'domain' => $validated['domain'],
+                ]);
         }
 
-        return redirect()->route('admin.tenants.index')
-            ->with('success', 'Tenant updated successfully!');
+        return redirect()
+            ->route('admin.tenants.index')
+            ->with('success', 'Tenant updated successfully.');
     }
 
     /**
@@ -456,7 +550,7 @@ class AdminController extends Controller
          * Password disimpan dalam bentuk encrypted,
          * bukan plain text.
          */
-        if (! empty($validated['mail_password'])) {
+        if (!empty($validated['mail_password'])) {
             $data['mail_password_encrypted'] = Crypt::encryptString(
                 $validated['mail_password']
             );
@@ -475,7 +569,10 @@ class AdminController extends Controller
          */
         return redirect()
             ->route('admin.mail-settings')
-            ->with('success', 'Mail settings updated successfully.');
+            ->with(
+                'success',
+                'Mail settings updated successfully.'
+            );
     }
 
     /**
@@ -484,10 +581,503 @@ class AdminController extends Controller
     public function deleteTenant(Tenant $tenant)
     {
         $tenantName = $tenant->name;
+
         $tenant->domains()->delete();
         $tenant->delete();
 
-        return redirect()->route('admin.tenants.index')
-            ->with('success', "Tenant '{$tenantName}' deleted successfully!");
+        return redirect()
+            ->route('admin.tenants.index')
+            ->with(
+                'success',
+                "Tenant '{$tenantName}' deleted successfully!"
+            );
+    }
+
+    /**
+     * Branding tenant
+     */
+    public function branding()
+    {
+        $tenant = auth()->user()->tenant;
+
+        abort_unless($tenant, 403);
+
+        $branding = $tenant->branding;
+
+        return Inertia::render('Admin/Branding/Index', [
+            'tenant' => [
+                'id' => $tenant->id,
+                'name' => $tenant->name,
+            ],
+
+            'branding' => [
+                'agency_name' => $branding?->agency_name ?? '',
+                'tagline' => $branding?->tagline ?? '',
+
+                'logo_path' => $branding?->logo_path,
+
+                'certificate_logo_path' =>
+                    $branding?->certificate_logo_path,
+
+                'logo_url' => $branding?->logo_path
+                    ? Storage::disk('public')->url(
+                        $branding->logo_path
+                    )
+                    : null,
+
+                'certificate_logo_url' =>
+                    $branding?->certificate_logo_path
+                        ? Storage::disk('public')->url(
+                            $branding->certificate_logo_path
+                        )
+                        : null,
+            ],
+        ]);
+    }
+
+    /**
+ * Update tenant branding
+ */
+    public function updateBranding(Request $request)
+    {
+        $tenant = auth()->user()->tenant;
+
+        abort_unless($tenant, 403);
+
+        $validated = $request->validate([
+            'agency_name' => ['nullable', 'string', 'max:255'],
+            'tagline' => ['nullable', 'string', 'max:500'],
+
+            'logo' => [
+                'nullable',
+                'file',
+                'mimes:jpg,jpeg,png,webp',
+                'max:5120',
+            ],
+
+            'certificate_logo' => [
+                'nullable',
+                'file',
+                'mimes:jpg,jpeg,png,webp',
+                'max:5120',
+            ],
+        ]);
+
+        /*
+        * Ambil atau buat branding tenant.
+        */
+        $branding = $tenant->branding;
+
+        if (!$branding) {
+            $branding = TenantBranding::create([
+                'tenant_id' => $tenant->id,
+                'agency_name' => $validated['agency_name'] ?? null,
+                'tagline' => $validated['tagline'] ?? null,
+            ]);
+        } else {
+            $branding->update([
+                'agency_name' => $validated['agency_name'] ?? null,
+                'tagline' => $validated['tagline'] ?? null,
+            ]);
+        }
+
+        /*
+        * Process main logo.
+        *
+        * PNG  -> PNG
+        * WebP -> WebP
+        * JPG  -> PNG
+        */
+        if ($request->hasFile('logo')) {
+            $oldLogoPath = $branding->logo_path;
+
+            $newLogoPath = $this->processBrandingImage(
+                $request->file('logo'),
+                $tenant->id,
+                'logo'
+            );
+
+            $branding->update([
+                'logo_path' => $newLogoPath,
+            ]);
+
+            /*
+            * Hapus file lama hanya setelah file baru
+            * berhasil diproses dan disimpan.
+            */
+            if (
+                $oldLogoPath &&
+                $oldLogoPath !== $newLogoPath &&
+                Storage::disk('public')->exists($oldLogoPath)
+            ) {
+                Storage::disk('public')->delete($oldLogoPath);
+            }
+        }
+
+        /*
+        * Process certificate logo.
+        *
+        * PNG  -> PNG
+        * WebP -> WebP
+        * JPG  -> PNG
+        */
+        if ($request->hasFile('certificate_logo')) {
+            $oldCertificateLogoPath = $branding->certificate_logo_path;
+
+            $newCertificateLogoPath = $this->processBrandingImage(
+                $request->file('certificate_logo'),
+                $tenant->id,
+                'certificate-logo'
+            );
+
+            $branding->update([
+                'certificate_logo_path' => $newCertificateLogoPath,
+            ]);
+
+            /*
+            * Hapus file lama hanya setelah file baru
+            * berhasil diproses dan disimpan.
+            */
+            if (
+                $oldCertificateLogoPath &&
+                $oldCertificateLogoPath !== $newCertificateLogoPath &&
+                Storage::disk('public')->exists($oldCertificateLogoPath)
+            ) {
+                Storage::disk('public')->delete(
+                    $oldCertificateLogoPath
+                );
+            }
+        }
+
+        return redirect()
+            ->route('admin.branding')
+            ->with(
+                'success',
+                'Branding berhasil diperbarui.'
+            );
+    }
+
+    private function processBrandingImage(
+        $file,
+        string $tenantId,
+        string $name
+    ): string {
+        $mime = strtolower($file->getMimeType());
+
+        /*
+         * Create GD source image based on the actual MIME type.
+         */
+        $source = match ($mime) {
+            'image/png' => @imagecreatefrompng(
+                $file->getRealPath()
+            ),
+
+            'image/webp' => function_exists('imagecreatefromwebp')
+                ? @imagecreatefromwebp($file->getRealPath())
+                : false,
+
+            'image/jpeg' => @imagecreatefromjpeg(
+                $file->getRealPath()
+            ),
+
+            default => false,
+        };
+
+        if (!$source) {
+            throw new \RuntimeException(
+                'Gagal memproses gambar branding. ' .
+                'Pastikan ekstensi GD PHP aktif dan file gambar valid.'
+            );
+        }
+
+        $width = imagesx($source);
+        $height = imagesy($source);
+
+        if ($width < 1 || $height < 1) {
+            imagedestroy($source);
+
+            throw new \RuntimeException(
+                'Dimensi gambar branding tidak valid.'
+            );
+        }
+
+        /*
+         * Create true-color canvas with alpha support.
+         *
+         * Dimensions are exactly the same as the original.
+         */
+        $image = imagecreatetruecolor($width, $height);
+
+        if (!$image) {
+            imagedestroy($source);
+
+            throw new \RuntimeException(
+                'Gagal membuat canvas gambar branding.'
+            );
+        }
+
+        /*
+         * Make canvas transparent.
+         */
+        imagealphablending($image, false);
+
+        $transparent = imagecolorallocatealpha(
+            $image,
+            255,
+            255,
+            255,
+            127
+        );
+
+        imagefill(
+            $image,
+            0,
+            0,
+            $transparent
+        );
+
+        /*
+         * Copy original image.
+         *
+         * Alpha information from PNG/WebP is preserved.
+         */
+        imagecopy(
+            $image,
+            $source,
+            0,
+            0,
+            0,
+            0,
+            $width,
+            $height
+        );
+
+        imagedestroy($source);
+
+        $backgroundTolerance = 18;
+
+        imagealphablending($image, false);
+
+        $backgroundWhite = imagecolorallocatealpha(
+            $image,
+            255,
+            255,
+            255,
+            0
+        );
+
+        for ($y = 0; $y < $height; $y++) {
+            for ($x = 0; $x < $width; $x++) {
+                $rgba = imagecolorat($image, $x, $y);
+
+                $alpha = ($rgba >> 24) & 0x7F;
+
+                /*
+                 * Keep already-transparent pixels untouched.
+                 */
+                if ($alpha >= 120) {
+                    continue;
+                }
+
+                $red = ($rgba >> 16) & 0xFF;
+                $green = ($rgba >> 8) & 0xFF;
+                $blue = $rgba & 0xFF;
+
+                if (
+                    $red >= 255 - $backgroundTolerance &&
+                    $green >= 255 - $backgroundTolerance &&
+                    $blue >= 255 - $backgroundTolerance
+                ) {
+                    imagesetpixel(
+                        $image,
+                        $x,
+                        $y,
+                        $backgroundWhite
+                    );
+                }
+            }
+        }
+
+        /*
+         * Transparent color used by flood-fill.
+         */
+        $transparentBackground = imagecolorallocatealpha(
+            $image,
+            255,
+            255,
+            255,
+            127
+        );
+
+        imagealphablending($image, false);
+
+        for ($x = 0; $x < $width; $x++) {
+            $this->removeConnectedWhiteBackground(
+                $image,
+                $x,
+                0,
+                $backgroundTolerance,
+                $transparentBackground
+            );
+
+            if ($height > 1) {
+                $this->removeConnectedWhiteBackground(
+                    $image,
+                    $x,
+                    $height - 1,
+                    $backgroundTolerance,
+                    $transparentBackground
+                );
+            }
+        }
+
+        /*
+         * Left and right edges.
+         */
+        for ($y = 1; $y < $height - 1; $y++) {
+            $this->removeConnectedWhiteBackground(
+                $image,
+                0,
+                $y,
+                $backgroundTolerance,
+                $transparentBackground
+            );
+
+            if ($width > 1) {
+                $this->removeConnectedWhiteBackground(
+                    $image,
+                    $width - 1,
+                    $y,
+                    $backgroundTolerance,
+                    $transparentBackground
+                );
+            }
+        }
+
+        /*
+         * Preserve original format whenever possible.
+         *
+         * JPEG cannot store transparency, so it becomes PNG.
+         */
+        $extension = match ($mime) {
+            'image/png' => 'png',
+
+            'image/webp' => function_exists('imagewebp')
+                ? 'webp'
+                : 'png',
+
+            default => 'png',
+        };
+
+        /*
+         * UUID avoids filename collisions.
+         */
+        $filename = "{$name}-" . Str::uuid() . ".{$extension}";
+
+        $path = "tenants/{$tenantId}/branding/{$filename}";
+
+        /*
+         * Ensure alpha is written correctly.
+         */
+        imagealphablending($image, false);
+        imagesavealpha($image, true);
+
+        /*
+         * Encode image into memory first.
+         *
+         * We only save the file to Storage after successful encoding.
+         */
+        ob_start();
+
+        $saved = match ($extension) {
+            'webp' => imagewebp(
+                $image,
+                null,
+                90
+            ),
+
+            default => imagepng(
+                $image,
+                null,
+                6
+            ),
+        };
+
+        $contents = ob_get_clean();
+
+        imagedestroy($image);
+
+        if (
+            !$saved ||
+            $contents === false ||
+            $contents === ''
+        ) {
+            throw new \RuntimeException(
+                'Gagal menyimpan hasil pemrosesan gambar branding.'
+            );
+        }
+
+        /*
+         * Store processed image.
+         */
+        Storage::disk('public')->put(
+            $path,
+            $contents
+        );
+
+        return $path;
+    }
+
+    /**
+     * Remove a white background region when the supplied pixel
+     * is connected to that background.
+     *
+     * imagefill() fills only the connected region having the same
+     * color. Because near-white pixels were normalized beforehand,
+     * enclosed white logo elements remain untouched.
+     */
+    private function removeConnectedWhiteBackground(
+        $image,
+        int $x,
+        int $y,
+        int $backgroundTolerance,
+        $transparentColor
+    ): void {
+        $pixel = imagecolorat($image, $x, $y);
+
+        $alpha = ($pixel >> 24) & 0x7F;
+
+        /*
+         * Already transparent.
+         */
+        if ($alpha >= 120) {
+            return;
+        }
+
+        $red = ($pixel >> 16) & 0xFF;
+        $green = ($pixel >> 8) & 0xFF;
+        $blue = $pixel & 0xFF;
+
+        /*
+         * Only flood-fill near-white edge regions.
+         */
+        if (
+            $red < 255 - $backgroundTolerance ||
+            $green < 255 - $backgroundTolerance ||
+            $blue < 255 - $backgroundTolerance
+        ) {
+            return;
+        }
+
+        /*
+         * imagefill() removes the entire connected normalized-white
+         * region while leaving enclosed white regions untouched.
+         */
+        imagefill(
+            $image,
+            $x,
+            $y,
+            $transparentColor
+        );
     }
 }

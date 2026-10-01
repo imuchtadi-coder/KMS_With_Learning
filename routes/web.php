@@ -106,6 +106,11 @@ Route::middleware('auth')->group(function () {
         Route::get('/admin/mail-settings', [AdminController::class, 'mailSettings'])->name('admin.mail-settings');
         Route::put('/admin/mail-settings', [AdminController::class, 'updateMailSettings'])->name('admin.mail-settings.update');
 
+        // Branding (tenant admin only)
+        Route::middleware('role:tenant_admin')->group(function () {Route::get('/admin/branding', [AdminController::class, 'branding'])->name('admin.branding');
+        Route::put('/admin/branding', [AdminController::class, 'updateBranding'])->name('admin.branding.update');
+        });
+
         // Categories & Tags
         Route::resource('/admin/categories', CategoryController::class)->names('admin.categories')->except(['show']);
         Route::resource('/admin/tags', TagController::class)->names('admin.tags')->except(['show']);

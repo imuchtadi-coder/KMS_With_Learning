@@ -91,6 +91,24 @@ class SecurityHeaders
             $connectSrc[] = 'ws://127.0.0.1:5173';
         }
 
+        $appUrl = config('app.url');
+
+        $appOrigin = null;
+
+        if ($appUrl) {
+            $scheme = parse_url($appUrl, PHP_URL_SCHEME);
+            $host = parse_url($appUrl, PHP_URL_HOST);
+            $port = parse_url($appUrl, PHP_URL_PORT);
+
+            if ($scheme && $host) {
+                $appOrigin = "{$scheme}://{$host}";
+
+                if ($port) {
+                    $appOrigin .= ":{$port}";
+                }
+            }
+        }
+
         /*
          * Build Content Security Policy
          */
@@ -109,7 +127,11 @@ class SecurityHeaders
 
             "style-src 'self' 'unsafe-inline'",
 
-            "img-src 'self' data: https://ui-avatars.com",
+            "img-src 'self' data: blob:"
+            . ($appOrigin ? " {$appOrigin}" : '')
+            . " https://ui-avatars.com",
+
+            // "img-src 'self' data: blob: https://ui-avatars.com",
 
             "font-src 'self' data: http://localhost:5173 http://127.0.0.1:5173",
 
