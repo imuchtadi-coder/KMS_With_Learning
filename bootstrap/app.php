@@ -28,8 +28,11 @@ return Application::configure(basePath: dirname(__DIR__))
                 | Request::HEADER_X_FORWARDED_PROTO
         );
 
-        $middleware->web(prepend: [
+        $middleware->web(append: [
             HandleInertiaRequests::class,
+        ]);
+
+        $middleware->web(prepend: [
             SecurityHeaders::class,
         ]);
 

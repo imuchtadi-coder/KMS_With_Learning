@@ -16,44 +16,44 @@ class CertificateController extends Controller
     /**
      * Generate certificate for student if course is completed
      */
-    public static function generateIfEligible($userId, $courseId)
-    {
-        // Check if certificate already exists
-        if (Certificate::where('user_id', $userId)
-            ->where('course_id', $courseId)
-            ->exists()) {
-            return null;
-        }
+    // public static function generateIfEligible($userId, $courseId)
+    // {
+    //     // Check if certificate already exists
+    //     if (Certificate::where('user_id', $userId)
+    //         ->where('course_id', $courseId)
+    //         ->exists()) {
+    //         return null;
+    //     }
 
-        // Check if all lessons are completed
-        $course = Course::with(['sections.lessons'])->find($courseId);
-        $lessons = $course->sections->flatMap->lessons;
+    //     // Check if all lessons are completed
+    //     $course = Course::with(['sections.lessons'])->find($courseId);
+    //     $lessons = $course->sections->flatMap->lessons;
 
-        $completedLessons = Progress::where('user_id', $userId)
-            ->whereIn('lesson_id', $lessons->pluck('id'))
-            ->where('completed', true)
-            ->count();
+    //     $completedLessons = Progress::where('user_id', $userId)
+    //         ->whereIn('lesson_id', $lessons->pluck('id'))
+    //         ->where('completed', true)
+    //         ->count();
 
-        // Only generate if all lessons completed
-        if ($completedLessons !== $lessons->count()) {
-            return null;
-        }
+    //     // Only generate if all lessons completed
+    //     if ($completedLessons !== $lessons->count()) {
+    //         return null;
+    //     }
 
-        // Generate certificate
-        $certificateNumber = 'CERT-' . strtoupper(substr(md5($userId . $courseId . now()), 0, 8));
+    //     // Generate certificate
+    //     $certificateNumber = 'CERT-' . strtoupper(substr(md5($userId . $courseId . now()), 0, 8));
 
-        $certificate = Certificate::create([
-            'user_id' => $userId,
-            'course_id' => $courseId,
-            'certificate_number' => $certificateNumber,
-            'issued_at' => now(),
-        ]);
+    //     $certificate = Certificate::create([
+    //         'user_id' => $userId,
+    //         'course_id' => $courseId,
+    //         'certificate_number' => $certificateNumber,
+    //         'issued_at' => now(),
+    //     ]);
 
-        // Generate PDF
-        self::generatePDF($certificate);
+    //     // Generate PDF
+    //     self::generatePDF($certificate);
 
-        return $certificate;
-    }
+    //     return $certificate;
+    // }
 
     /**
      * Generate PDF for certificate

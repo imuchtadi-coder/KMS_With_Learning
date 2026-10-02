@@ -26,7 +26,7 @@ const flash = usePage().props.flash
     <div class="mb-8">
       <h4 class="text-h4 font-weight-bold mb-1">Welcome!</h4>
       <p class="text-body-1 text-medium-emphasis">
-        <template v-if="$page.props.auth.user.roles?.includes('tenant_admin')">
+        <template v-if="$page.props.auth.user?.roles?.includes('tenant_admin')">
           Here's what's happening in your tenant.
         </template>
         <template v-else>

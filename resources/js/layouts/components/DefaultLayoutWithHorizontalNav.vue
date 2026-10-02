@@ -1,4 +1,7 @@
 <script setup>
+import { computed } from 'vue'
+import { usePage } from '@inertiajs/vue3'
+
 import navItems from '@/navigation/horizontal'
 import { themeConfig } from '@themeConfig'
 
@@ -13,6 +16,37 @@ import UserProfile from '@/layouts/components/UserProfile.vue'
 import { HorizontalNavLayout } from '@layouts'
 import { VNodeRenderer } from '@layouts/components/VNodeRenderer'
 
+const page = usePage()
+
+const isSuperAdmin = computed(() =>
+  page.props.auth?.user?.roles?.includes('superadmin')
+)
+
+const tenantBranding = computed(() =>
+  page.props.tenantBranding
+)
+
+const appTitle = computed(() => {
+  if (
+    isSuperAdmin.value ||
+    !tenantBranding.value?.agency_name
+  ) {
+    return themeConfig.app.title
+  }
+
+  return tenantBranding.value.agency_name
+})
+
+const appLogoUrl = computed(() => {
+  if (
+    isSuperAdmin.value ||
+    !tenantBranding.value?.logo_url
+  ) {
+    return null
+  }
+
+  return tenantBranding.value.logo_url
+})
 </script>
 
 <template>
@@ -23,16 +57,31 @@ import { VNodeRenderer } from '@layouts/components/VNodeRenderer'
         to="/"
         class="app-logo d-flex align-center gap-x-3"
       >
-        <VNodeRenderer :nodes="themeConfig.app.logo" />
+        <!-- Tenant Logo -->
+        <img
+          v-if="appLogoUrl"
+          :src="appLogoUrl"
+          :alt="appTitle"
+          class="app-logo-img"
+        />
 
-        <h1 class="app-title font-weight-bold leading-normal text-xl text-capitalize">
-          {{ themeConfig.app.title }}
+        <!-- KITSuluh Logo untuk Super Admin / fallback -->
+        <VNodeRenderer
+          v-else
+          :nodes="themeConfig.app.logo"
+        />
+
+        <h1
+          class="app-title font-weight-bold leading-normal text-xl text-capitalize"
+        >
+          {{ appTitle }}
         </h1>
       </RouterLink>
+
       <VSpacer />
 
       <NavSearchBar trigger-btn-class="ms-lg-n3" />
-      
+
       <NavbarThemeSwitcher />
       <NavbarShortcuts />
       <NavBarNotifications class="me-2" />
@@ -46,6 +95,13 @@ import { VNodeRenderer } from '@layouts/components/VNodeRenderer'
     <template #footer>
       <Footer />
     </template>
-
   </HorizontalNavLayout>
 </template>
+
+<style scoped>
+.app-logo-img {
+  width: 36px;
+  height: 36px;
+  object-fit: contain;
+}
+</style>
