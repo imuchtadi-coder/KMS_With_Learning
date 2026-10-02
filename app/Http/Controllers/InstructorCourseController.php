@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Assignment;
 use App\Models\Course;
 use App\Models\Enrollment;
+use Illuminate\Support\Facades\DB;
 use App\Models\Lesson;
 use App\Models\Progress;
 use App\Models\Quiz;
@@ -383,5 +384,58 @@ class InstructorCourseController extends Controller
             'success',
             'Certificate issued successfully.'
         );
+    }
+
+    public function reorderLessons(Request $request, Section $section)
+    {
+        $user = auth()->user();
+        $course = $section->course;
+
+        // Authorization
+        if (
+            !(
+                $user->id === $course->created_by &&
+                $user->tenant_id === $course->tenant_id
+            ) &&
+            !$user->hasRole('tenant_admin')
+        ) {
+            abort(403);
+        }
+
+        $validated = $request->validate([
+            'lessons' => ['required', 'array', 'min:1'],
+            'lessons.*' => ['required', 'integer', 'distinct'],
+        ]);
+
+        $lessonIds = collect($validated['lessons'])
+            ->map(fn ($id) => (int) $id)
+            ->values();
+
+        // Ambil semua lesson yang memang berada di section ini
+        $sectionLessonIds = Lesson::where('section_id', $section->id)
+            ->pluck('id')
+            ->map(fn ($id) => (int) $id)
+            ->values();
+
+        // Pastikan lesson yang dikirim lengkap dan hanya berasal dari section ini
+        if (
+            $lessonIds->count() !== $sectionLessonIds->count() ||
+            $lessonIds->sort()->values()->all() !== $sectionLessonIds->sort()->values()->all()
+        ) {
+            return back()->with('error', 'Invalid lesson order.');
+        }
+
+        DB::transaction(function () use ($lessonIds, $section) {
+
+            foreach ($lessonIds as $index => $lessonId) {
+                Lesson::where('id', $lessonId)
+                    ->where('section_id', $section->id)
+                    ->update([
+                        'order' => $index + 1,
+                    ]);
+            }
+        });
+
+        return back()->with('success', 'Lesson order updated successfully.');
     }
 }

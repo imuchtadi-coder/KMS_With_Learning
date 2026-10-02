@@ -169,7 +169,8 @@ Route::middleware('auth')->group(function () {
         // Lessons
         Route::post('/instructor/sections/{section}/lessons', [InstructorCourseController::class, 'storeLesson'])->name('instructor.lessons.store');
         Route::put('/instructor/lessons/{lesson}', [InstructorCourseController::class, 'updateLesson'])->name('instructor.lessons.update');
-        Route::delete('/instructor/lessons/{lesson}', [InstructorCourseController::class, 'destroyLesson'])->name('instructor.lessons.destroy');
+        Route::delete('/instructor/lessons/{lesson}', [InstructorCourseController::class, 'destroyLesson'])->name('instructor.lessons.destroy');        
+        Route::post('/instructor/sections/{section}/lessons/reorder', [InstructorCourseController::class, 'reorderLessons'])->name('instructor.lessons.reorder');
 
         // Videos
         Route::post('/instructor/lessons/{lesson}/videos', [VideoController::class, 'store'])->name('instructor.videos.store');

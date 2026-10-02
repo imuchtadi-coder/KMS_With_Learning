@@ -90,31 +90,31 @@ const hasExams = (quizzes) => quizzes?.some(q => q.is_exam) || false
         <VCard flat border class="pa-6">
           <h6 class="text-h6 font-weight-semibold mb-3">Assessment</h6>
           <VList class="pa-0">
-            <VListItem :href="route('instructor.questions.index', course.id)" class="px-0" density="compact">
+            <VListItem :href="route('instructor.questions.index', course.id)" class="assessment-link px-0" density="compact">
               <template #prepend><VIcon icon="mdi-help-circle-outline" size="20" class="mr-2" /></template>
               <VListItemTitle>Question Bank</VListItemTitle>
             </VListItem>
-            <VListItem :href="route('instructor.quizzes.index', course.id)" class="px-0" density="compact">
+            <VListItem :href="route('instructor.quizzes.index', course.id)" class="assessment-link px-0" density="compact">
               <template #prepend><VIcon icon="mdi-order-bool-descending-variant" size="20" class="mr-2" /></template>
               <VListItemTitle>Quizzes</VListItemTitle>
             </VListItem>
-            <VListItem :href="route('instructor.assignments.index', course.id)" class="px-0" density="compact">
+            <VListItem :href="route('instructor.assignments.index', course.id)" class="assessment-link px-0" density="compact">
               <template #prepend><VIcon icon="mdi-file-document-outline" size="20" class="mr-2" /></template>
               <VListItemTitle>Assignments</VListItemTitle>
             </VListItem>
-            <VListItem :href="route('instructor.gradebook.index', course.id)" class="px-0" density="compact">
+            <VListItem :href="route('instructor.gradebook.index', course.id)" class="assessment-link px-0" density="compact">
               <template #prepend><VIcon icon="mdi-chart-box-outline" size="20" class="mr-2" /></template>
               <VListItemTitle>Gradebook</VListItemTitle>
             </VListItem>
-            <VListItem :href="route('discussions.index', { course_id: course.id })" class="px-0" density="compact">
+            <VListItem :href="route('discussions.index', { course_id: course.id })" class="assessment-link px-0" density="compact">
               <template #prepend><VIcon icon="mdi-forum-outline" size="20" class="mr-2" /></template>
               <VListItemTitle>Discussions</VListItemTitle>
             </VListItem>
-            <VListItem :href="route('instructor.live-classes.index', course.id)" class="px-0" density="compact">
+            <VListItem :href="route('instructor.live-classes.index', course.id)" class="assessment-link px-0" density="compact">
               <template #prepend><VIcon icon="mdi-video-outline" size="20" class="mr-2" /></template>
               <VListItemTitle>Live Classes</VListItemTitle>
             </VListItem>
-            <VListItem :href="route('instructor.assessment-analytics.course', course.id)" class="px-0 border-t mt-2 pt-2" density="compact">
+            <VListItem :href="route('instructor.assessment-analytics.course', course.id)" class="assessment-link px-0 border-t mt-2 pt-2" density="compact">
               <template #prepend><VIcon icon="mdi-chart-bar" size="20" class="mr-2" /></template>
               <VListItemTitle>Assessment Analytics</VListItemTitle>
             </VListItem>
@@ -124,7 +124,7 @@ const hasExams = (quizzes) => quizzes?.some(q => q.is_exam) || false
                 v-for="exam in (course.quizzes || []).filter(q => q.is_exam)"
                 :key="exam.id"
                 :href="route('instructor.exams.monitor', [course.id, exam.id])"
-                class="px-0 ml-3"
+                class="assessment-link px-0 ml-3"
                 density="compact"
               >
                 <template #prepend><VIcon icon="mdi-monitor-eye" size="20" class="mr-2" /></template>
@@ -137,3 +137,20 @@ const hasExams = (quizzes) => quizzes?.some(q => q.is_exam) || false
     </VRow>
   </div>
 </template>
+
+<style scoped>
+  .assessment-link {
+  cursor: pointer;
+  transition:
+    background-color 0.15s ease,
+    color 0.15s ease;
+  }
+
+  .assessment-link:hover {
+    background-color: rgba(var(--v-theme-primary), 0.06);
+  }
+
+  .assessment-link:hover .v-list-item-title {
+    color: rgb(var(--v-theme-primary));
+  }
+</style>

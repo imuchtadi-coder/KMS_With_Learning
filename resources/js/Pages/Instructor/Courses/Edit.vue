@@ -58,6 +58,9 @@ const contentDialog = ref(false)
 const contentLessonId = ref(null)
 const uploadingMaterial = ref(false)
 const showVideoForm = ref(false)
+
+const draggingLessonId = ref(null)
+const reorderingSectionId = ref(null)
 const videoForm = useForm({
   source_type: 'hls',
   title: '',
@@ -261,6 +264,69 @@ function formatFileSize(bytes) {
   if (!bytes) return '0 MB'
   return (bytes / 1024 / 1024).toFixed(2) + ' MB'
 }
+
+function onLessonDragStart(lesson) {
+  draggingLessonId.value = lesson.id
+}
+
+function onLessonDragEnd() {
+  draggingLessonId.value = null
+}
+
+function onLessonDrop(section, targetLesson) {
+  const draggedId = draggingLessonId.value
+
+  if (!draggedId || draggedId === targetLesson.id) {
+    draggingLessonId.value = null
+    return
+  }
+
+  const lessons = [...(section.lessons || [])]
+
+  const oldIndex = lessons.findIndex(
+    lesson => lesson.id === draggedId
+  )
+
+  const newIndex = lessons.findIndex(
+    lesson => lesson.id === targetLesson.id
+  )
+
+  if (oldIndex === -1 || newIndex === -1) {
+    draggingLessonId.value = null
+    return
+  }
+
+  const [movedLesson] = lessons.splice(oldIndex, 1)
+  lessons.splice(newIndex, 0, movedLesson)
+
+  section.lessons = lessons
+
+  draggingLessonId.value = null
+  reorderingSectionId.value = section.id
+
+  router.post(
+    route('instructor.lessons.reorder', section.id),
+    {
+      lessons: lessons.map(lesson => lesson.id),
+    },
+    {
+      preserveScroll: true,
+
+      onFinish: () => {
+        reorderingSectionId.value = null
+      },
+
+      onError: errors => {
+        console.error('Lesson reorder error:', errors)
+
+        router.reload({
+          only: ['course'],
+          preserveScroll: true,
+        })
+      },
+    }
+  )
+}
 </script>
 
 <template>
@@ -340,17 +406,49 @@ function formatFileSize(bytes) {
               </div>
             </div>
             <div class="ml-4 pl-4 border-l">
-              <div v-for="lesson in (section.lessons || [])" :key="lesson.id" class="d-flex align-center justify-space-between pa-3 bg-light-primary rounded mb-2">
-                <div class="flex-grow-1" style="min-width: 0;">
-                  <div class="font-weight-medium text-body-2">{{ lesson.title }}</div>
-                  <div class="text-caption text-medium-emphasis">{{ lesson.description?.substring(0, 50) || '' }}</div>
-                  <div class="d-flex align-center ga-2 mt-1">
-                    <span class="text-caption text-info">
-                      <VIcon icon="mdi-video" size="14" class="me-1" />{{ lesson.videos?.length || 0 }}
-                    </span>
-                    <span class="text-caption text-primary">
-                      <VIcon icon="mdi-paperclip" size="14" class="me-1" />{{ lesson.materials?.length || 0 }}
-                    </span>
+              <div
+                v-for="lesson in (section.lessons || [])"
+                :key="lesson.id"
+                class="d-flex align-center justify-space-between pa-3 bg-light-primary rounded mb-2 lesson-sortable"
+                :class="{
+                  'lesson-dragging': draggingLessonId === lesson.id,
+                  'lesson-reordering': reorderingSectionId === section.id,
+                }"
+                draggable="true"
+                @dragstart="onLessonDragStart(lesson)"
+                @dragend="onLessonDragEnd"
+                @dragover.prevent
+                @drop.prevent="onLessonDrop(section, lesson)"
+              >
+                <!-- Lesson info -->
+                <div class="d-flex align-center ga-3 flex-grow-1" style="min-width: 0;">
+                  <VIcon
+                    icon="mdi-drag-vertical"
+                    size="22"
+                    class="text-medium-emphasis lesson-drag-handle"
+                    title="Drag untuk mengubah urutan"
+                  />
+
+                  <div class="flex-grow-1" style="min-width: 0;">
+                    <div class="font-weight-medium text-body-2">
+                      {{ lesson.title }}
+                    </div>
+
+                    <div class="text-caption text-medium-emphasis">
+                      {{ lesson.description?.substring(0, 50) || '' }}
+                    </div>
+
+                    <div class="d-flex align-center ga-2 mt-1">
+                      <span class="text-caption text-info">
+                        <VIcon icon="mdi-video" size="14" class="me-1" />
+                        {{ lesson.videos?.length || 0 }}
+                      </span>
+
+                      <span class="text-caption text-primary">
+                        <VIcon icon="mdi-paperclip" size="14" class="me-1" />
+                        {{ lesson.materials?.length || 0 }}
+                      </span>
+                    </div>
                   </div>
                 </div>
                 <div class="d-flex ga-1 flex-shrink-0">
@@ -594,3 +692,22 @@ function formatFileSize(bytes) {
     </VDialog>
   </div>
 </template>
+
+<style scoped>
+.lesson-sortable {
+  cursor: default;
+}
+
+.lesson-sortable:hover {
+  cursor: grab;
+}
+
+.lesson-sortable:active {
+  cursor: grabbing;
+}
+
+.lesson-drag-handle {
+  cursor: grab;
+  flex-shrink: 0;
+}
+</style>

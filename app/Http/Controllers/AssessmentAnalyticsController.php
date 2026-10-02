@@ -341,6 +341,7 @@ class AssessmentAnalyticsController extends Controller
 
             foreach ($gradebookItems as $item) {
                 $grade = $grades->firstWhere('gradebook_item_id', $item->id);
+
                 if ($grade && $grade->percentage !== null) {
                     $totalPercentage += $grade->percentage * $item->weight;
                     $totalWeight += $item->weight;
@@ -348,17 +349,39 @@ class AssessmentAnalyticsController extends Controller
             }
 
             if ($totalWeight > 0) {
+                $avgPercentage = $totalPercentage / $totalWeight;
+
                 $rankings[] = [
-                    'user' => $enrollment->user,
-                    'avg_percentage' => round($totalPercentage / $totalWeight, 2),
-                    'grade_count' => $grades->count(),
+                    'name' => $enrollment->user->name,
+                    'score' => round($avgPercentage, 2),
+                    'grade' => $this->percentageToGrade($avgPercentage),
                 ];
             }
         }
 
-        usort($rankings, fn($a, $b) => $b['avg_percentage'] <=> $a['avg_percentage']);
+        usort(
+            $rankings,
+            fn($a, $b) => $b['score'] <=> $a['score']
+        );
+
+        foreach ($rankings as $index => &$ranking) {
+            $ranking['rank'] = $index + 1;
+        }
+
+        unset($ranking);
 
         return $rankings;
+    }
+
+    private function percentageToGrade(float $percentage): string
+    {
+        return match (true) {
+            $percentage >= 90 => 'A',
+            $percentage >= 80 => 'B',
+            $percentage >= 70 => 'C',
+            $percentage >= 60 => 'D',
+            default => 'E',
+        };
     }
 
     public function exportCsv(Course $course)
