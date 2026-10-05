@@ -103,9 +103,14 @@ class HandleInertiaRequests extends Middleware
                     'id' => $request->user()->id,
                     'name' => $request->user()->name,
                     'email' => $request->user()->email,
+                    'tenant_id' => $request->user()->tenant_id,
                     'roles' => $request->user()->roles->pluck('name'),
                 ] : null,
             ],
+
+            'languageScope' => $user && !$user->hasRole('superadmin') && $user->tenant_id
+                ? 'tenant:' . $user->tenant_id
+                : 'global',
 
             /*
              * ========================================================

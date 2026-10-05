@@ -1,9 +1,10 @@
 import { createApp } from 'vue'
 import { createRouter, createWebHistory } from 'vue-router'
-import { createInertiaApp } from '@inertiajs/vue3'
+import { createInertiaApp, router as inertiaRouter } from '@inertiajs/vue3'
 import { registerPlugins } from '@core/utils/plugins'
 import { ZiggyVue } from 'ziggy-js'
 import { Ziggy } from './ziggy'
+import { installPageTranslations, setLanguageScope } from './composables/language'
 
 // Use current origin so routes work on any port/domain
 Ziggy.url = window.location.origin
@@ -49,11 +50,20 @@ createInertiaApp({
         return page
     },
     setup({ el, App, props, plugin }) {
+        setLanguageScope(props.initialPage?.props?.languageScope)
+        inertiaRouter.on('navigate', event => {
+            const languageScope = event.detail.page.props?.languageScope
+
+            if (languageScope)
+                setLanguageScope(languageScope)
+        })
+
         const app = createApp(App, props)
         app.use(plugin)
         app.use(router)
         app.use(ZiggyVue, Ziggy)
         registerPlugins(app)
         app.mount(el)
+        installPageTranslations()
     },
 })

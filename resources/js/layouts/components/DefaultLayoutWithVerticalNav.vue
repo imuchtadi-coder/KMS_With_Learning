@@ -12,6 +12,7 @@ import NavSearchBar from '@/layouts/components/NavSearchBar.vue'
 import NavbarShortcuts from '@/layouts/components/NavbarShortcuts.vue'
 import NavbarThemeSwitcher from '@/layouts/components/NavbarThemeSwitcher.vue'
 import UserProfile from '@/layouts/components/UserProfile.vue'
+import LanguageSwitcher from '@/layouts/components/LanguageSwitcher.vue'
 
 // @layouts plugin
 import { VerticalNavLayout } from '@layouts'
@@ -141,6 +142,7 @@ const appLogoUrl = computed(() => {
         <VSpacer />
 
         <NavbarThemeSwitcher />
+        <LanguageSwitcher />
         <NavbarShortcuts />
         <NavBarNotifications class="me-1" />
         <UserProfile />

@@ -1,7 +1,6 @@
-import { ref } from 'vue'
+import { locale } from './language'
 
 export function useI18n() {
-  const locale = ref('en')
   return { locale }
 }
 

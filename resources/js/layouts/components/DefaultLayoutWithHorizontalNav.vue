@@ -12,6 +12,7 @@ import NavSearchBar from '@/layouts/components/NavSearchBar.vue'
 import NavbarShortcuts from '@/layouts/components/NavbarShortcuts.vue'
 import NavbarThemeSwitcher from '@/layouts/components/NavbarThemeSwitcher.vue'
 import UserProfile from '@/layouts/components/UserProfile.vue'
+import LanguageSwitcher from '@/layouts/components/LanguageSwitcher.vue'
 
 import { HorizontalNavLayout } from '@layouts'
 import { VNodeRenderer } from '@layouts/components/VNodeRenderer'
@@ -83,6 +84,7 @@ const appLogoUrl = computed(() => {
       <NavSearchBar trigger-btn-class="ms-lg-n3" />
 
       <NavbarThemeSwitcher />
+      <LanguageSwitcher />
       <NavbarShortcuts />
       <NavBarNotifications class="me-2" />
       <UserProfile />
