@@ -162,21 +162,33 @@ class BulkOperationController extends Controller
         $course = Course::where('tenant_id', auth()->user()->tenant_id)
             ->findOrFail($validated['course_id']);
         $enrolled = 0;
+        $tenant = auth()->user()->tenant;
+        $initializeTenant = $tenant && ! tenancy()->initialized;
 
-        foreach ($validated['user_ids'] as $userId) {
-            $exists = Enrollment::where('user_id', $userId)
-                ->where('course_id', $course->id)
-                ->exists();
+        if ($initializeTenant) {
+            tenancy()->initialize($tenant);
+        }
 
-            if (! $exists) {
-                $enrollment = Enrollment::create([
-                    'user_id' => $userId,
-                    'course_id' => $course->id,
-                ]);
+        try {
+            foreach ($validated['user_ids'] as $userId) {
+                $exists = Enrollment::where('user_id', $userId)
+                    ->where('course_id', $course->id)
+                    ->exists();
 
-                $user = User::find($userId);
-                $user->notify(new EnrollmentConfirmation($course));
-                $enrolled++;
+                if (! $exists) {
+                    $enrollment = Enrollment::create([
+                        'user_id' => $userId,
+                        'course_id' => $course->id,
+                    ]);
+
+                    $user = User::find($userId);
+                    $user->notify(new EnrollmentConfirmation($course, (int) $enrollment->id));
+                    $enrolled++;
+                }
+            }
+        } finally {
+            if ($initializeTenant) {
+                tenancy()->end();
             }
         }
 

@@ -1,29 +1,29 @@
 {
-  "_UserProfile-BospVrxj.css": {
-    "file": "assets/UserProfile-BospVrxj.css",
-    "src": "_UserProfile-BospVrxj.css"
+  "_LanguageSwitcher-BospVrxj.css": {
+    "file": "assets/LanguageSwitcher-BospVrxj.css",
+    "src": "_LanguageSwitcher-BospVrxj.css"
   },
-  "_UserProfile-u7mGvfAS.js": {
-    "file": "assets/UserProfile-u7mGvfAS.js",
-    "name": "UserProfile",
+  "_LanguageSwitcher-D0GbDJaD.js": {
+    "file": "assets/LanguageSwitcher-D0GbDJaD.js",
+    "name": "LanguageSwitcher",
     "imports": [
       "resources/js/app.js",
-      "_vendor-CfBrzgBQ.js",
-      "_vuetify-Tv8P5Rv7.js"
+      "_vendor-CplrFdmR.js",
+      "_vuetify-BBaF0oaJ.js"
     ],
     "css": [
-      "assets/UserProfile-BospVrxj.css"
+      "assets/LanguageSwitcher-BospVrxj.css"
     ]
   },
-  "_vendor-CfBrzgBQ.js": {
-    "file": "assets/vendor-CfBrzgBQ.js",
+  "_vendor-CplrFdmR.js": {
+    "file": "assets/vendor-CplrFdmR.js",
     "name": "vendor"
   },
-  "_vuetify-Tv8P5Rv7.js": {
-    "file": "assets/vuetify-Tv8P5Rv7.js",
+  "_vuetify-BBaF0oaJ.js": {
+    "file": "assets/vuetify-BBaF0oaJ.js",
     "name": "vuetify",
     "imports": [
-      "_vendor-CfBrzgBQ.js"
+      "_vendor-CplrFdmR.js"
     ]
   },
   "node_modules/@mdi/font/fonts/materialdesignicons-webfont.eot": {
@@ -49,13 +49,13 @@
     "isDynamicEntry": true
   },
   "resources/js/app.js": {
-    "file": "assets/app-CUIZr7LY.js",
+    "file": "assets/app-CmGPOvOB.js",
     "name": "app",
     "src": "resources/js/app.js",
     "isEntry": true,
     "imports": [
-      "_vendor-CfBrzgBQ.js",
-      "_vuetify-Tv8P5Rv7.js"
+      "_vendor-CplrFdmR.js",
+      "_vuetify-BBaF0oaJ.js"
     ],
     "dynamicImports": [
       "node_modules/hls.js/dist/hls.mjs",
@@ -63,7 +63,7 @@
       "resources/js/layouts/components/DefaultLayoutWithVerticalNav.vue"
     ],
     "css": [
-      "assets/app-CtqHoqE0.css"
+      "assets/app-C37XV5D8.css"
     ],
     "assets": [
       "assets/materialdesignicons-webfont-CSr8KVlo.eot",
@@ -73,27 +73,33 @@
     ]
   },
   "resources/js/layouts/components/DefaultLayoutWithHorizontalNav.vue": {
-    "file": "assets/DefaultLayoutWithHorizontalNav-DVbK8GDn.js",
+    "file": "assets/DefaultLayoutWithHorizontalNav-B5o4nyg4.js",
     "name": "DefaultLayoutWithHorizontalNav",
     "src": "resources/js/layouts/components/DefaultLayoutWithHorizontalNav.vue",
     "isDynamicEntry": true,
     "imports": [
       "resources/js/app.js",
-      "_UserProfile-u7mGvfAS.js",
-      "_vendor-CfBrzgBQ.js",
-      "_vuetify-Tv8P5Rv7.js"
+      "_LanguageSwitcher-D0GbDJaD.js",
+      "_vendor-CplrFdmR.js",
+      "_vuetify-BBaF0oaJ.js"
+    ],
+    "css": [
+      "assets/DefaultLayoutWithHorizontalNav-YYII6EBv.css"
     ]
   },
   "resources/js/layouts/components/DefaultLayoutWithVerticalNav.vue": {
-    "file": "assets/DefaultLayoutWithVerticalNav-DIrZDUxr.js",
+    "file": "assets/DefaultLayoutWithVerticalNav-CR1q1NMZ.js",
     "name": "DefaultLayoutWithVerticalNav",
     "src": "resources/js/layouts/components/DefaultLayoutWithVerticalNav.vue",
     "isDynamicEntry": true,
     "imports": [
+      "_vendor-CplrFdmR.js",
       "resources/js/app.js",
-      "_UserProfile-u7mGvfAS.js",
-      "_vendor-CfBrzgBQ.js",
-      "_vuetify-Tv8P5Rv7.js"
+      "_LanguageSwitcher-D0GbDJaD.js",
+      "_vuetify-BBaF0oaJ.js"
+    ],
+    "css": [
+      "assets/DefaultLayoutWithVerticalNav-CuhT2TBa.css"
     ]
   }
 }

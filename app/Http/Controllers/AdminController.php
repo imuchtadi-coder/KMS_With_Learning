@@ -6,10 +6,13 @@ use App\Models\Course;
 use App\Models\Tenant;
 use App\Models\User;
 use App\Models\TenantBranding;
+use App\Listeners\ConfigureTenantMail;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules\Password;
@@ -522,46 +525,30 @@ class AdminController extends Controller
             'mail_port' => ['nullable', 'integer', 'min:1', 'max:65535'],
             'mail_username' => ['nullable', 'string', 'max:255'],
             'mail_password' => ['nullable', 'string', 'max:255'],
-            'mail_encryption' => ['nullable', 'string', 'in:tls,ssl,'],
+            'mail_encryption' => ['nullable', 'string', 'in:tls,ssl'],
         ]);
 
         // Ambil tenant milik user yang sedang login
         $tenant = auth()->user()->tenant;
 
-        /*
-         * Ambil data tenant yang sudah ada.
-         * Jangan menimpa data tenant lain yang mungkin sudah tersimpan.
-         */
-        $data = $tenant->data ?? [];
+        $settings = [
+            'mail_from_address' => $validated['mail_from_address'] ?? null,
+            'mail_from_name' => $validated['mail_from_name'] ?? null,
+            'mail_host' => $validated['mail_host'] ?? null,
+            'mail_port' => $validated['mail_port'] ?? null,
+            'mail_username' => $validated['mail_username'] ?? null,
+            'mail_encryption' => $validated['mail_encryption'] ?: null,
+        ];
 
-        /*
-         * Simpan Mail Settings ke dalam kolom JSON "data"
-         */
-        $data['mail_from_address'] = $validated['mail_from_address'];
-        $data['mail_from_name'] = $validated['mail_from_name'];
-        $data['mail_host'] = $validated['mail_host'];
-        $data['mail_port'] = $validated['mail_port'];
-        $data['mail_username'] = $validated['mail_username'];
-        $data['mail_encryption'] = $validated['mail_encryption'] ?: null;
-
-        /*
-         * Password hanya diperbarui jika user mengisi password baru.
-         *
-         * Password disimpan dalam bentuk encrypted,
-         * bukan plain text.
-         */
-        if (!empty($validated['mail_password'])) {
-            $data['mail_password_encrypted'] = Crypt::encryptString(
+        // Tenant uses Stancl's virtual columns: set attributes on the model so
+        // its save hook can merge them into the existing JSON data safely.
+        if (! empty($validated['mail_password'])) {
+            $settings['mail_password_encrypted'] = Crypt::encryptString(
                 $validated['mail_password']
             );
         }
 
-        /*
-         * Simpan seluruh data kembali ke kolom "data" tenant.
-         */
-        $tenant->update([
-            'data' => $data,
-        ]);
+        $tenant->forceFill($settings)->save();
 
         /*
          * Kembali ke halaman Mail Settings
@@ -573,6 +560,44 @@ class AdminController extends Controller
                 'success',
                 'Mail settings updated successfully.'
             );
+    }
+
+    /** Send a test message to the requested recipient using tenant SMTP. */
+    public function testMailSettings(Request $request, ConfigureTenantMail $mailConfigurator)
+    {
+        $tenant = $request->user()->tenant;
+        $validated = $request->validate([
+            'recipient' => ['required', 'email', 'max:255'],
+        ]);
+        $recipient = $validated['recipient'];
+
+        if (! $tenant) {
+            return back()->with('error', 'A tenant is required to test SMTP.');
+        }
+
+        if (empty($tenant->mail_host)) {
+            return back()->with('error', 'Save an SMTP host before sending a test email.');
+        }
+
+        try {
+            $mailConfigurator->configure($tenant);
+
+            Mail::mailer('smtp')->raw(
+                'This is a test email from KITsuluh. Your tenant SMTP settings can send mail.',
+                function ($message) use ($recipient) {
+                    $message->to($recipient)->subject('KITsuluh SMTP test');
+                }
+            );
+        } catch (\Throwable $exception) {
+            Log::warning('Tenant SMTP test failed', [
+                'tenant_id' => $tenant->id,
+                'exception' => $exception::class,
+            ]);
+
+            return back()->with('error', 'SMTP test failed. Check the host, port, encryption, credentials, and application logs.');
+        }
+
+        return back()->with('success', "Test email sent to {$recipient}.");
     }
 
     /**
@@ -712,6 +737,19 @@ class AdminController extends Controller
             ) {
                 Storage::disk('public')->delete($oldLogoPath);
             }
+        } elseif ($request->boolean('remove_logo')) {
+            $oldLogoPath = $branding->logo_path;
+
+            $branding->update([
+                'logo_path' => null,
+            ]);
+
+            if (
+                $oldLogoPath &&
+                Storage::disk('public')->exists($oldLogoPath)
+            ) {
+                Storage::disk('public')->delete($oldLogoPath);
+            }
         }
 
         /*
@@ -741,6 +779,21 @@ class AdminController extends Controller
             if (
                 $oldCertificateLogoPath &&
                 $oldCertificateLogoPath !== $newCertificateLogoPath &&
+                Storage::disk('public')->exists($oldCertificateLogoPath)
+            ) {
+                Storage::disk('public')->delete(
+                    $oldCertificateLogoPath
+                );
+            }
+        } elseif ($request->boolean('remove_certificate_logo')) {
+            $oldCertificateLogoPath = $branding->certificate_logo_path;
+
+            $branding->update([
+                'certificate_logo_path' => null,
+            ]);
+
+            if (
+                $oldCertificateLogoPath &&
                 Storage::disk('public')->exists($oldCertificateLogoPath)
             ) {
                 Storage::disk('public')->delete(

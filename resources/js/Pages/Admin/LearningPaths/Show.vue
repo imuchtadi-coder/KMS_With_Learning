@@ -1,5 +1,6 @@
 <script setup>
 import { router, useForm } from '@inertiajs/vue3'
+import { ref } from 'vue'
 
 const { learningPath, availableCourses } = defineProps({
   learningPath: { type: Object, required: true },
@@ -7,6 +8,7 @@ const { learningPath, availableCourses } = defineProps({
 })
 
 const form = useForm({ course_id: '' })
+const reordering = ref(false)
 
 const addCourse = () => {
   form.post(route('admin.learning-paths.add-course', learningPath.id), {
@@ -22,9 +24,15 @@ const removeCourse = (courseId) => {
 }
 
 const reorderCourse = (courseId, direction) => {
+  if (reordering.value) return
+
+  reordering.value = true
   router.post(route('admin.learning-paths.courses.reorder', [learningPath.id, courseId]), {
     direction,
-  }, { preserveScroll: true })
+  }, {
+    preserveScroll: true,
+    onFinish: () => { reordering.value = false },
+  })
 }
 </script>
 
@@ -94,10 +102,10 @@ const reorderCourse = (courseId, direction) => {
 
               <template #append>
                 <div class="d-flex ga-1">
-                  <VBtn icon size="x-small" variant="tonal" :disabled="idx === 0" @click="reorderCourse(course.id, 'up')">
+                  <VBtn icon size="x-small" variant="tonal" :disabled="reordering || idx === 0" @click="reorderCourse(course.id, 'up')">
                     <VIcon icon="mdi-arrow-up" size="16" />
                   </VBtn>
-                  <VBtn icon size="x-small" variant="tonal" :disabled="idx === learningPath.courses.length - 1" @click="reorderCourse(course.id, 'down')">
+                  <VBtn icon size="x-small" variant="tonal" :disabled="reordering || idx === learningPath.courses.length - 1" @click="reorderCourse(course.id, 'down')">
                     <VIcon icon="mdi-arrow-down" size="16" />
                   </VBtn>
                   <VBtn icon size="x-small" color="error" variant="tonal" @click="removeCourse(course.id)">

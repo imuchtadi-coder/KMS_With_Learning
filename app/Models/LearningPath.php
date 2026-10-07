@@ -36,7 +36,8 @@ class LearningPath extends Model
     {
         return $this->belongsToMany(Course::class, 'learning_path_courses', 'learning_path_id', 'course_id')
             ->withPivot('order', 'is_mandatory')
-            ->orderBy('learning_path_courses.order');
+            ->orderBy('learning_path_courses.order')
+            ->orderBy('learning_path_courses.id');
     }
 
     /**

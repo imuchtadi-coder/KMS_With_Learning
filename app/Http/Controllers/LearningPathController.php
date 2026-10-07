@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Course;
 use App\Models\LearningPath;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 
@@ -127,8 +128,9 @@ class LearningPathController extends Controller
 
         $course = Course::findOrFail($validated['course_id']);
 
-        // Get next order
-        $nextOrder = $learningPath->courses()->count();
+        // Appending after the highest order avoids colliding with an existing
+        // course when an earlier course has been removed.
+        $nextOrder = ((int) $learningPath->courses()->max('learning_path_courses.order')) + 1;
 
         $learningPath->addCourse($course, $nextOrder);
 
@@ -146,64 +148,49 @@ class LearningPathController extends Controller
         $this->authorize('update', $learningPath);
         abort_unless($course->tenant_id === $learningPath->tenant_id, 404);
 
-        $direction = $request->input('direction', 'down');
+        $validated = $request->validate([
+            'direction' => ['required', Rule::in(['up', 'down'])],
+        ]);
 
-        // Check whether the course exists in this learning path
-        $courseInPath = $learningPath->courses()
-            ->where('courses.id', $course->id)
-            ->first();
+        DB::transaction(function () use ($learningPath, $course, $validated) {
+            // Serialize reorder requests for this path so quick repeated clicks
+            // cannot overwrite one another with stale positions.
+            LearningPath::whereKey($learningPath->id)->lockForUpdate()->firstOrFail();
 
-        if (! $courseInPath) {
-            return back()->with('error', 'Course not found in this path!');
-        }
+            $orderedCourses = DB::table('learning_path_courses')
+                ->where('learning_path_id', $learningPath->id)
+                ->orderBy('order')
+                ->orderBy('id')
+                ->lockForUpdate()
+                ->get(['id', 'course_id']);
 
-        // Get current order from pivot table
-        $currentOrder = $courseInPath->pivot->order;
+            $courseIds = $orderedCourses->pluck('course_id')->map(fn ($id) => (int) $id)->values()->all();
+            $currentIndex = array_search((int) $course->id, $courseIds, true);
 
-        // Get maximum order from pivot table
-        $maxOrder = $learningPath->courses()
-            ->max('learning_path_courses.order');
-
-        if ($direction === 'up' && $currentOrder > 0) {
-
-            // Find course immediately above
-            $swapCourse = $learningPath->courses()
-                ->wherePivot('order', $currentOrder - 1)
-                ->first();
-
-            if ($swapCourse) {
-                // Swap orders
-                $learningPath->courses()->updateExistingPivot(
-                    $swapCourse->id,
-                    ['order' => $currentOrder]
-                );
-
-                $learningPath->courses()->updateExistingPivot(
-                    $course->id,
-                    ['order' => $currentOrder - 1]
-                );
+            if ($currentIndex === false) {
+                abort(404, 'Course not found in this learning path.');
             }
 
-        } elseif ($direction === 'down' && $currentOrder < $maxOrder) {
+            $targetIndex = $currentIndex + ($validated['direction'] === 'up' ? -1 : 1);
 
-            // Find course immediately below
-            $swapCourse = $learningPath->courses()
-                ->wherePivot('order', $currentOrder + 1)
-                ->first();
-
-            if ($swapCourse) {
-                // Swap orders
-                $learningPath->courses()->updateExistingPivot(
-                    $swapCourse->id,
-                    ['order' => $currentOrder]
-                );
-
-                $learningPath->courses()->updateExistingPivot(
-                    $course->id,
-                    ['order' => $currentOrder + 1]
-                );
+            if ($targetIndex < 0 || $targetIndex >= count($courseIds)) {
+                return;
             }
-        }
+
+            [$courseIds[$currentIndex], $courseIds[$targetIndex]] = [
+                $courseIds[$targetIndex],
+                $courseIds[$currentIndex],
+            ];
+
+            // Rewrite contiguous positions to repair any gaps or duplicate
+            // order values left by older operations.
+            foreach ($courseIds as $order => $courseId) {
+                DB::table('learning_path_courses')
+                    ->where('learning_path_id', $learningPath->id)
+                    ->where('course_id', $courseId)
+                    ->update(['order' => $order, 'updated_at' => now()]);
+            }
+        });
 
         return back()->with('success', 'Course reordered successfully!');
     }

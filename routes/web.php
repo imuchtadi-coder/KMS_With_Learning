@@ -105,6 +105,7 @@ Route::middleware('auth')->group(function () {
         // Mail Settings (tenant admin & superadmin)
         Route::get('/admin/mail-settings', [AdminController::class, 'mailSettings'])->name('admin.mail-settings');
         Route::put('/admin/mail-settings', [AdminController::class, 'updateMailSettings'])->name('admin.mail-settings.update');
+        Route::post('/admin/mail-settings/test', [AdminController::class, 'testMailSettings'])->name('admin.mail-settings.test');
 
         // Branding (tenant admin only)
         Route::middleware('role:tenant_admin')->group(function () {Route::get('/admin/branding', [AdminController::class, 'branding'])->name('admin.branding');
@@ -262,6 +263,7 @@ Route::middleware('auth')->group(function () {
         Route::get('/', [NotificationController::class, 'index'])->name('index');
         Route::post('/{notification}/read', [NotificationController::class, 'markAsRead'])->name('mark-as-read');
         Route::post('/read-all', [NotificationController::class, 'markAllAsRead'])->name('mark-all-as-read');
+        Route::delete('/{notification}', [NotificationController::class, 'destroy'])->name('destroy');
         Route::get('/unread-count', [NotificationController::class, 'unreadCount'])->name('unread-count');
     });
 
@@ -280,16 +282,44 @@ Route::middleware('auth')->group(function () {
     Route::delete('/discussions/{discussion}/replies/{reply}', [DiscussionReplyController::class, 'destroy'])->name('discussions.replies.destroy');
 
     // Student routes
-    Route::middleware('role:student')->group(function () {
-        Route::get('/student', [StudentCourseController::class, 'dashboard'])->name('student.dashboard');
-        Route::get('/student/courses', [StudentCourseController::class, 'listCourses'])->name('student.courses.list');
-        Route::get('/student/courses/{course}', [StudentCourseController::class, 'showCourse'])->name('student.courses.show');
-        Route::post('/student/courses/{course}/enroll', [StudentCourseController::class, 'enroll'])->name('student.courses.enroll');
-        Route::get('/student/enrollments', [StudentCourseController::class, 'myEnrollments'])->name('student.enrollments');
-        Route::get('/student/enrollments/{enrollment}', [StudentCourseController::class, 'showEnrollment'])->name('student.enrollments.show');
-        Route::get('/student/courses/{course}/lessons/{lesson}', [StudentCourseController::class, 'viewLesson'])->name('student.lessons.view');
-        Route::post('/student/lessons/{lesson}/complete', [StudentCourseController::class, 'completeLesson'])->name('student.lessons.complete');
-        Route::post('/student/lessons/update-progress', [ProgressController::class, 'update'])->name('student.lessons.update-progress');
+    Route::middleware([\App\Http\Middleware\InitializeTenancyByDomainOrAuthenticatedTenant::class, 'role:student',])->group(function () {
+        Route::get('/student', [StudentCourseController::class, 'dashboard'])
+            ->name('student.dashboard');
+
+        Route::get('/student/courses', [StudentCourseController::class, 'listCourses'])
+            ->name('student.courses.list');
+
+        Route::get('/student/courses/{course}', [StudentCourseController::class, 'showCourse'])
+            ->name('student.courses.show');
+
+        Route::post('/student/courses/{course}/enroll', [StudentCourseController::class, 'enroll'])
+            ->name('student.courses.enroll');
+
+        Route::get('/student/enrollments', [StudentCourseController::class, 'myEnrollments'])
+            ->name('student.enrollments');
+
+        Route::get('/student/enrollments/{enrollment}', [StudentCourseController::class, 'showEnrollment'])
+            ->name('student.enrollments.show');
+
+        Route::get('/student/courses/{course}/lessons/{lesson}', [StudentCourseController::class, 'viewLesson'])
+            ->name('student.lessons.view');
+
+        Route::post('/student/lessons/{lesson}/complete', [StudentCourseController::class, 'completeLesson'])
+            ->name('student.lessons.complete');
+
+        Route::post('/student/lessons/update-progress', [ProgressController::class, 'update'])
+            ->name('student.lessons.update-progress');
+
+    // Route::middleware('role:student')->group(function () {
+    //     Route::get('/student', [StudentCourseController::class, 'dashboard'])->name('student.dashboard');
+    //     Route::get('/student/courses', [StudentCourseController::class, 'listCourses'])->name('student.courses.list');
+    //     Route::get('/student/courses/{course}', [StudentCourseController::class, 'showCourse'])->name('student.courses.show');
+    //     Route::post('/student/courses/{course}/enroll', [StudentCourseController::class, 'enroll'])->name('student.courses.enroll');
+    //     Route::get('/student/enrollments', [StudentCourseController::class, 'myEnrollments'])->name('student.enrollments');
+    //     Route::get('/student/enrollments/{enrollment}', [StudentCourseController::class, 'showEnrollment'])->name('student.enrollments.show');
+    //     Route::get('/student/courses/{course}/lessons/{lesson}', [StudentCourseController::class, 'viewLesson'])->name('student.lessons.view');
+    //     Route::post('/student/lessons/{lesson}/complete', [StudentCourseController::class, 'completeLesson'])->name('student.lessons.complete');
+    //     Route::post('/student/lessons/update-progress', [ProgressController::class, 'update'])->name('student.lessons.update-progress');
         
         // Learning Paths
         Route::get('/student/learning-paths', [StudentLearningPathController::class, 'index'])->name('student.learning-paths.index');

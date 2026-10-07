@@ -65,8 +65,8 @@ const handleLogoChange = event => {
 
   form.logo = file
   logoPreview.value = URL.createObjectURL(file)
+  form.remove_logo = false
   removeLogo.value = false
-  logoPreview.value = URL.createObjectURL(file)
 }
 
 const handleCertificateLogoChange = event => {
@@ -78,8 +78,8 @@ const handleCertificateLogoChange = event => {
 
   form.certificate_logo = file
   certificateLogoPreview.value = URL.createObjectURL(file)
+  form.remove_certificate_logo = false
   removeCertificateLogo.value = false
-  certificateLogoPreview.value = URL.createObjectURL(file)
 }
 
 const submit = () => {
@@ -125,8 +125,9 @@ const deleteCertificateLogo = () => {
       </h4>
 
       <p class="text-body-2 text-medium-emphasis">
-        Manage branding configuration for {{ tenant.name }}
+        Manage branding configuration for 
       </p>
+      <p class="text-body-4 text-medium-emphasis">{{ tenant.name }}</p>  
     </div>
 
     <VAlert
@@ -159,7 +160,7 @@ const deleteCertificateLogo = () => {
             <!-- Tagline -->
             <VCol cols="12">
               <VTextField
-                v-model="form.tagline"
+                
                 label="Tagline"
                 placeholder="Enter organization tagline"
                 :error-messages="form.errors.tagline"

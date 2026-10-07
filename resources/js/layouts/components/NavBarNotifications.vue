@@ -7,8 +7,8 @@ const notificationsData = computed(() => usePage().props.notifications)
 const notifications = computed(() => notificationsData.value?.items ?? [])
 const unreadCount = computed(() => notificationsData.value?.unreadCount ?? 0)
 
-const removeNotification = () => {
-  // No remove endpoint — no-op
+const removeNotification = notificationId => {
+  router.delete(route('notifications.destroy', notificationId), { preserveScroll: true })
 }
 
 const markRead = notificationId => {
@@ -23,7 +23,11 @@ const markUnRead = () => {
 
 const handleNotificationClick = notification => {
   if (notification.action_url && notification.action_url !== '#') {
-    router.get(notification.action_url)
+    // Notification actions are app-local. Keep Inertia on the current origin so
+    // central localhost sessions work and connect-src does not need tenant hosts.
+    const target = new URL(notification.action_url, window.location.origin)
+
+    router.get(`${target.pathname}${target.search}${target.hash}`)
   }
 }
 

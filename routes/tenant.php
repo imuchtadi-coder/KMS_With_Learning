@@ -2,16 +2,6 @@
 
 declare(strict_types=1);
 
-use Illuminate\Support\Facades\Route;
-use Stancl\Tenancy\Middleware\InitializeTenancyByDomain;
-use Stancl\Tenancy\Middleware\PreventAccessFromCentralDomains;
-
-Route::middleware([
-    'web',
-    InitializeTenancyByDomain::class,
-    PreventAccessFromCentralDomains::class,
-])->group(function () {
-    Route::get('/', function () {
-        return redirect('/login');
-    });
-});
+// Tenant routes live in routes/web.php and apply tenancy middleware to
+// tenant-specific endpoints. Keep this file empty so it cannot shadow the
+// central login and dashboard routes at '/'.

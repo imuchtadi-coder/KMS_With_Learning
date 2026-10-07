@@ -1,9 +1,6 @@
-```vue
 <script setup>
-import { computed } from 'vue'
+import { computed, watch } from 'vue'
 import { useForm, usePage } from '@inertiajs/vue3'
-
-console.log('=== SETTINGS.VUE TERLOAD ===')
 
 const page = usePage()
 
@@ -17,40 +14,42 @@ const form = useForm({
   mail_port: mailSettings.value?.mail_port ?? '',
   mail_username: mailSettings.value?.mail_username ?? '',
   mail_password: '',
-  mail_encryption: mailSettings.value?.mail_encryption ?? '',
+  mail_encryption: mailSettings.value?.mail_encryption ?? 'tls',
 })
 
+const testForm = useForm({
+  recipient: mailSettings.value?.mail_from_address ?? page.props.auth?.user?.email ?? '',
+})
+
+/*
+|--------------------------------------------------------------------------
+| Default SMTP Port berdasarkan Encryption
+|--------------------------------------------------------------------------
+*/
+const defaultPorts = {
+  tls: 587,
+  ssl: 465,
+}
+
+watch(
+  () => form.mail_encryption,
+  encryption => {
+    if (encryption && defaultPorts[encryption]) {
+      form.mail_port = defaultPorts[encryption]
+    }
+  }
+)
+
 const submit = () => {
-  console.log('================================')
-  console.log('BUTTON SAVE DIKLIK')
-  console.log('FORM DATA:', form.data())
-  console.log('================================')
-
   form.put(route('admin.mail-settings.update'), {
-    onStart: () => {
-      console.log('PUT START')
-    },
+    preserveScroll: true,
+    onSuccess: () => form.reset('mail_password'),
+  })
+}
 
-    onSuccess: (page) => {
-      console.log('================================')
-      console.log('PUT SUCCESS')
-      console.log('PAGE PROPS:', page.props)
-      console.log('FLASH:', page.props.flash)
-      console.log('================================')
-    },
-
-    onError: (errors) => {
-      console.log('================================')
-      console.log('PUT ERROR')
-      console.log('ERRORS:', errors)
-      console.log('================================')
-    },
-
-    onFinish: () => {
-      console.log('================================')
-      console.log('PUT FINISHED')
-      console.log('================================')
-    },
+const testSmtp = () => {
+  testForm.post(route('admin.mail-settings.test'), {
+    preserveScroll: true,
   })
 }
 </script>
@@ -65,6 +64,10 @@ const submit = () => {
 
       <p class="text-body-2 text-medium-emphasis">
         Configure SMTP email settings for your tenant
+      </p>
+
+      <p class="text-caption text-medium-emphasis">
+        Save the settings first, then choose where the SMTP test email should be sent.
       </p>
     </div>
 
@@ -92,11 +95,6 @@ const submit = () => {
       max-width="700"
     >
       <VCardText>
-
-        <!--
-          Untuk sementara kita tidak menggunakan submit event.
-          Submit dipanggil langsung dari tombol.
-        -->
         <VForm>
           <VRow>
 
@@ -157,9 +155,8 @@ const submit = () => {
               <VSelect
                 v-model="form.mail_encryption"
                 :items="[
-                  { title: 'None', value: '' },
                   { title: 'TLS', value: 'tls' },
-                  { title: 'SSL', value: 'ssl' }
+                  { title: 'SSL', value: 'ssl' },
                 ]"
                 label="Encryption"
                 clearable
@@ -188,11 +185,27 @@ const submit = () => {
                 v-model="form.mail_password"
                 label="Password"
                 type="password"
+                hint="Leave blank to keep the saved password. Gmail requires an App Password, not your normal Google password."
+                persistent-hint
                 :error-messages="form.errors.mail_password"
               />
             </VCol>
 
-            <!-- Save Button -->
+            <!-- Test Recipient -->
+            <VCol
+              cols="12"
+              class="d-flex ga-2"
+            >
+              <VTextField
+                v-model="testForm.recipient"
+                label="Test recipient email"
+                type="email"
+                :error-messages="testForm.errors.recipient"
+                class="flex-grow-1"
+              />
+            </VCol>
+
+            <!-- Buttons -->
             <VCol
               cols="12"
               class="d-flex ga-2"
@@ -205,13 +218,21 @@ const submit = () => {
               >
                 Save Settings
               </VBtn>
+
+              <VBtn
+                type="button"
+                variant="outlined"
+                :loading="testForm.processing"
+                :disabled="form.processing || testForm.processing"
+                @click="testSmtp"
+              >
+                Send Test Email to My Account
+              </VBtn>
             </VCol>
 
           </VRow>
         </VForm>
-
       </VCardText>
     </VCard>
   </div>
 </template>
-```

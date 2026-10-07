@@ -15,6 +15,10 @@ function markAllAsRead() {
   router.post(route('notifications.mark-all-as-read'), {}, { preserveScroll: true })
 }
 
+function deleteNotification(id) {
+  router.delete(route('notifications.destroy', id), { preserveScroll: true })
+}
+
 function timeAgo(dateStr) {
   const now = new Date()
   const date = new Date(dateStr)
@@ -54,6 +58,7 @@ function timeAgo(dateStr) {
             <div class="d-flex align-center ga-2 flex-shrink-0">
               <VBtn v-if="n.data?.action_url" variant="text" color="primary" size="small" :href="n.data.action_url">View</VBtn>
               <VBtn v-if="!n.read_at" variant="text" color="secondary" size="small" @click.stop="markAsRead(n.id)">Mark read</VBtn>
+              <VBtn icon="mdi-delete-outline" variant="text" color="error" size="small" aria-label="Delete notification" @click.stop="deleteNotification(n.id)" />
             </div>
           </div>
         </VCardText>

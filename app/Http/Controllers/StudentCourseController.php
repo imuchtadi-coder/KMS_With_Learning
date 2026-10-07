@@ -171,6 +171,22 @@ class StudentCourseController extends Controller
     {
         $user = auth()->user();
 
+        \Log::info('HIT_STUDENT_COURSE_ENROLL', [
+            'user_id' => $user->id,
+            'course_id' => $course->id,
+            'tenant_initialized' => tenancy()->initialized,
+            'tenant_id' => tenant('id'),
+        ]);
+
+        // Keep enrollment and its queued notification inside the student's tenant.
+        if (
+            !tenancy()->initialized
+            || (string) $course->tenant_id !== (string) $user->tenant_id
+            || (string) tenant('id') !== (string) $user->tenant_id
+        ) {
+            abort(404);
+        }
+
         // Check if already enrolled
         if ($course->enrollments()->where('user_id', $user->id)->exists()) {
             return redirect()->back()->with('error', 'You are already enrolled in this course.');
@@ -181,12 +197,37 @@ class StudentCourseController extends Controller
             return redirect()->back()->with('error', 'Course not available.');
         }
 
-        Enrollment::create([
+        $enrollment = Enrollment::create([
             'user_id' => $user->id,
             'course_id' => $course->id,
         ]);
 
-        $user->notify(new EnrollmentConfirmation($course));
+        \Log::info('BEFORE EnrollmentConfirmation notify', [
+            'tenant_initialized' => tenancy()->initialized,
+            'tenant_id' => tenant('id'),
+            'tenant_key' => tenancy()->initialized
+                ? tenant()->getTenantKey()
+                : null,
+            'user_id' => $user->id,
+            'course_id' => $course->id,
+        ]);
+
+        $notification = new EnrollmentConfirmation($course, (int) $enrollment->id);
+
+        try {
+            // Persist the in-app notification before the redirect so the shared
+            // navbar props include it on the next page response.
+            $user->notifyNow($notification, ['database']);
+        } catch (\Throwable $exception) {
+            \Log::warning('Enrollment database notification could not be stored', [
+                'user_id' => $user->id,
+                'course_id' => $course->id,
+                'exception' => $exception::class,
+            ]);
+        }
+
+        // SMTP remains queued and tenant-aware; only the in-app channel is immediate.
+        $user->notify($notification->onlyMail());
 
         return redirect()->route('student.courses.show', $course)
                        ->with('success', 'Enrolled successfully!');
