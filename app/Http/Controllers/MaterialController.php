@@ -8,6 +8,7 @@ use App\Traits\HasTenantStorage;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Stancl\Tenancy\Bootstrappers\FilesystemTenancyBootstrapper;
 
 class MaterialController extends Controller
 {
@@ -202,8 +203,26 @@ class MaterialController extends Controller
         }
 
         $filename = $material->title . '.' . $material->file_type;
+        $disk = Storage::disk();
 
-        return Storage::response($material->file_path, $filename, [
+        // Tenant filesystem bootstrapping can point the active local disk at a
+        // tenant-specific root, while existing materials may still be in the
+        // standard local disk root (storage/app/private).
+        if (! $disk->exists($material->file_path)) {
+            $storageRoot = app(FilesystemTenancyBootstrapper::class)
+                ->originalPaths['storage'] ?? storage_path();
+
+            $disk = Storage::build([
+                'driver' => 'local',
+                'root' => rtrim($storageRoot, '/\\') . DIRECTORY_SEPARATOR . 'app' . DIRECTORY_SEPARATOR . 'private',
+                'throw' => false,
+                'report' => false,
+            ]);
+        }
+
+        abort_unless($disk->exists($material->file_path), 404, 'Material file not found.');
+
+        return $disk->response($material->file_path, $filename, [
             'Content-Disposition' => 'inline; filename="' . $filename . '"',
         ]);
     }

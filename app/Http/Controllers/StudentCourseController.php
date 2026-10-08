@@ -276,7 +276,13 @@ class StudentCourseController extends Controller
                 ->with('error', 'Enrollment not found.');
         }
 
-        $enrollment->load(['course.instructor', 'course.sections.lessons']);
+        $enrollment->load([
+            'course.instructor',
+            'course.sections.lessons.videos',
+            'course.sections.lessons.progresses' => function ($query) use ($user) {
+                $query->where('user_id', $user->id);
+            },
+        ]);
 
         // Calculate progress
         $course = $enrollment->course;
