@@ -30,4 +30,9 @@ class Category extends Model
     {
         return $this->hasMany(Course::class);
     }
+
+    public function articles(): HasMany
+    {
+        return $this->hasMany(Article::class);
+    }
 }

@@ -163,9 +163,27 @@ class AssessmentAnalyticsController extends Controller
             ];
         });
 
+        $scoreDistribution = [
+            '85-100' => 0,
+            '70-84' => 0,
+            '55-69' => 0,
+            '0-54' => 0,
+        ];
+        foreach ($allScores as $s) {
+            if ($s >= 85) {
+                $scoreDistribution['85-100']++;
+            } elseif ($s >= 70) {
+                $scoreDistribution['70-84']++;
+            } elseif ($s >= 55) {
+                $scoreDistribution['55-69']++;
+            } else {
+                $scoreDistribution['0-54']++;
+            }
+        }
+
         return Inertia::render('Instructor/Analytics/Dashboard', compact(
             'totalCourses', 'totalEnrollments', 'totalQuizzes', 'totalAssignments',
-            'overallAvgScore', 'overallPassRate', 'coursePerformance'
+            'overallAvgScore', 'overallPassRate', 'coursePerformance', 'scoreDistribution'
         ));
     }
 

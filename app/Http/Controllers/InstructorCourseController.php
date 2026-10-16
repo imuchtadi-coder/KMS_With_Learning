@@ -39,10 +39,20 @@ class InstructorCourseController extends Controller
     {
         $user = auth()->user();
         $courses = Course::where('created_by', $user->id)
-            ->with(['tenant', 'sections', 'enrollments'])
-            ->paginate(10);
+            ->with(['tenant', 'sections.lessons'])
+            ->withCount(['quizzes', 'assignments', 'enrollments'])
+            ->latest()
+            ->paginate(12)
+            ->withQueryString();
 
-        return Inertia::render('Instructor/Courses/Index', compact('courses'));
+        $stats = [
+            'total' => Course::where('created_by', $user->id)->count(),
+            'published' => Course::where('created_by', $user->id)->where('published', true)->count(),
+            'draft' => Course::where('created_by', $user->id)->where('published', false)->count(),
+            'total_students' => Enrollment::whereHas('course', fn($q) => $q->where('created_by', $user->id))->count(),
+        ];
+
+        return Inertia::render('Instructor/Courses/Index', compact('courses', 'stats'));
     }
 
     public function create()

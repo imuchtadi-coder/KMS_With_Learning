@@ -402,14 +402,68 @@ class AdminController extends Controller
     /**
      * List all tenants
      */
-    public function tenants()
+    public function tenants(Request $request)
     {
-        $tenants = Tenant::with('domains')->paginate(10);
+        $status = $request->query('status', 'all');
+
+        $query = Tenant::with(['domains', 'plan', 'users' => function ($q) {
+            $q->whereHas('roles', fn ($r) => $r->where('name', 'tenant_admin'));
+        }]);
+
+        if ($status !== 'all') {
+            $query->where('status', $status);
+        }
+
+        $tenants = $query->latest()->paginate(10)->withQueryString();
+
+        $counts = [
+            'all' => Tenant::count(),
+            'pending' => Tenant::where('status', 'pending')->count(),
+            'active' => Tenant::where('status', 'active')->count(),
+            'rejected' => Tenant::where('status', 'rejected')->count(),
+        ];
 
         return Inertia::render(
             'Admin/Tenants/Index',
-            compact('tenants')
+            compact('tenants', 'counts', 'status')
         );
+    }
+
+    /**
+     * Approve a pending tenant
+     */
+    public function approveTenant(Tenant $tenant)
+    {
+        $tenant->update([
+            'status' => 'active',
+            'payment_status' => 'verified',
+            'paid_at' => now(),
+        ]);
+
+        return redirect()
+            ->back()
+            ->with(
+                'success',
+                "Tenant '{$tenant->name}' berhasil disetujui, pembayaran e-Wallet diverifikasi, dan portal diaktifkan."
+            );
+    }
+
+    /**
+     * Reject a tenant registration
+     */
+    public function rejectTenant(Tenant $tenant)
+    {
+        $tenant->update([
+            'status' => 'rejected',
+            'payment_status' => 'rejected',
+        ]);
+
+        return redirect()
+            ->back()
+            ->with(
+                'success',
+                "Pendaftaran tenant '{$tenant->name}' telah ditolak."
+            );
     }
 
     /**

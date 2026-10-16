@@ -42,9 +42,9 @@ createInertiaApp({
         if (!page)
             throw new Error(`Page not found: ${name}`)
 
-        if (name.startsWith('Auth/'))
+        if (name.startsWith('Auth/') || name.startsWith('Landing/') || name === 'Welcome')
             page.default.layout = AuthLayout
-        else
+        else if (page.default.layout === undefined)
             page.default.layout = AppLayout
 
         return page

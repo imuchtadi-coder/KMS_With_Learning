@@ -1,29 +1,29 @@
 {
-  "_LanguageSwitcher-BospVrxj.css": {
-    "file": "assets/LanguageSwitcher-BospVrxj.css",
-    "src": "_LanguageSwitcher-BospVrxj.css"
+  "_LanguageSwitcher-BDGrqwJE.css": {
+    "file": "assets/LanguageSwitcher-BDGrqwJE.css",
+    "src": "_LanguageSwitcher-BDGrqwJE.css"
   },
-  "_LanguageSwitcher-D0GbDJaD.js": {
-    "file": "assets/LanguageSwitcher-D0GbDJaD.js",
+  "_LanguageSwitcher-CaJXKawh.js": {
+    "file": "assets/LanguageSwitcher-CaJXKawh.js",
     "name": "LanguageSwitcher",
     "imports": [
       "resources/js/app.js",
-      "_vendor-CplrFdmR.js",
-      "_vuetify-BBaF0oaJ.js"
+      "_vendor-m1cebs48.js",
+      "_vuetify-DChcLCKh.js"
     ],
     "css": [
-      "assets/LanguageSwitcher-BospVrxj.css"
+      "assets/LanguageSwitcher-BDGrqwJE.css"
     ]
   },
-  "_vendor-CplrFdmR.js": {
-    "file": "assets/vendor-CplrFdmR.js",
+  "_vendor-m1cebs48.js": {
+    "file": "assets/vendor-m1cebs48.js",
     "name": "vendor"
   },
-  "_vuetify-BBaF0oaJ.js": {
-    "file": "assets/vuetify-BBaF0oaJ.js",
+  "_vuetify-DChcLCKh.js": {
+    "file": "assets/vuetify-DChcLCKh.js",
     "name": "vuetify",
     "imports": [
-      "_vendor-CplrFdmR.js"
+      "_vendor-m1cebs48.js"
     ]
   },
   "node_modules/@mdi/font/fonts/materialdesignicons-webfont.eot": {
@@ -48,14 +48,38 @@
     "src": "node_modules/hls.js/dist/hls.mjs",
     "isDynamicEntry": true
   },
+  "resources/images/avatars/avatar-1.png": {
+    "file": "assets/avatar-1-DMk2FF1-.png",
+    "src": "resources/images/avatars/avatar-1.png"
+  },
+  "resources/images/avatars/avatar-2.png": {
+    "file": "assets/avatar-2-D5OQ4OGs.png",
+    "src": "resources/images/avatars/avatar-2.png"
+  },
+  "resources/images/avatars/avatar-3.png": {
+    "file": "assets/avatar-3-BxDW4ia1.png",
+    "src": "resources/images/avatars/avatar-3.png"
+  },
+  "resources/images/avatars/avatar-4.png": {
+    "file": "assets/avatar-4-CtU30128.png",
+    "src": "resources/images/avatars/avatar-4.png"
+  },
+  "resources/images/illustrations/boy-app-academy.png": {
+    "file": "assets/boy-app-academy-DuT4zNXw.png",
+    "src": "resources/images/illustrations/boy-app-academy.png"
+  },
+  "resources/images/illustrations/laptop-girl.png": {
+    "file": "assets/laptop-girl-giHgUAnM.png",
+    "src": "resources/images/illustrations/laptop-girl.png"
+  },
   "resources/js/app.js": {
-    "file": "assets/app-CmGPOvOB.js",
+    "file": "assets/app-DYQwwEW-.js",
     "name": "app",
     "src": "resources/js/app.js",
     "isEntry": true,
     "imports": [
-      "_vendor-CplrFdmR.js",
-      "_vuetify-BBaF0oaJ.js"
+      "_vendor-m1cebs48.js",
+      "_vuetify-DChcLCKh.js"
     ],
     "dynamicImports": [
       "node_modules/hls.js/dist/hls.mjs",
@@ -63,9 +87,13 @@
       "resources/js/layouts/components/DefaultLayoutWithVerticalNav.vue"
     ],
     "css": [
-      "assets/app-C37XV5D8.css"
+      "assets/app-XLKHUho3.css"
     ],
     "assets": [
+      "assets/laptop-girl-giHgUAnM.png",
+      "assets/avatar-1-DMk2FF1-.png",
+      "assets/avatar-2-D5OQ4OGs.png",
+      "assets/avatar-3-BxDW4ia1.png",
       "assets/materialdesignicons-webfont-CSr8KVlo.eot",
       "assets/materialdesignicons-webfont-Dp5v-WZN.woff2",
       "assets/materialdesignicons-webfont-PXm3-2wK.woff",
@@ -73,30 +101,30 @@
     ]
   },
   "resources/js/layouts/components/DefaultLayoutWithHorizontalNav.vue": {
-    "file": "assets/DefaultLayoutWithHorizontalNav-B5o4nyg4.js",
+    "file": "assets/DefaultLayoutWithHorizontalNav-Bbzsdc2S.js",
     "name": "DefaultLayoutWithHorizontalNav",
     "src": "resources/js/layouts/components/DefaultLayoutWithHorizontalNav.vue",
     "isDynamicEntry": true,
     "imports": [
       "resources/js/app.js",
-      "_LanguageSwitcher-D0GbDJaD.js",
-      "_vendor-CplrFdmR.js",
-      "_vuetify-BBaF0oaJ.js"
+      "_LanguageSwitcher-CaJXKawh.js",
+      "_vendor-m1cebs48.js",
+      "_vuetify-DChcLCKh.js"
     ],
     "css": [
       "assets/DefaultLayoutWithHorizontalNav-YYII6EBv.css"
     ]
   },
   "resources/js/layouts/components/DefaultLayoutWithVerticalNav.vue": {
-    "file": "assets/DefaultLayoutWithVerticalNav-CR1q1NMZ.js",
+    "file": "assets/DefaultLayoutWithVerticalNav-Bg4bN_jw.js",
     "name": "DefaultLayoutWithVerticalNav",
     "src": "resources/js/layouts/components/DefaultLayoutWithVerticalNav.vue",
     "isDynamicEntry": true,
     "imports": [
-      "_vendor-CplrFdmR.js",
+      "_vendor-m1cebs48.js",
       "resources/js/app.js",
-      "_LanguageSwitcher-D0GbDJaD.js",
-      "_vuetify-BBaF0oaJ.js"
+      "_LanguageSwitcher-CaJXKawh.js",
+      "_vuetify-DChcLCKh.js"
     ],
     "css": [
       "assets/DefaultLayoutWithVerticalNav-CuhT2TBa.css"

@@ -9,6 +9,8 @@ let activeCookieKey = COOKIE_KEY
 const translations = {
   id: {
     'Dashboard': 'Dasbor', 'My Profile': 'Profil Saya', 'Discussions': 'Diskusi',
+    'Knowledge Base': 'Knowledge Base', 'All Articles & SOP': 'Semua Dokumen & SOP', 'Write New Document': 'Tulis Dokumen / SOP Baru',
+    'Semua Artikel & SOP': 'Semua Artikel & SOP', 'Tulis Artikel / SOP Baru': 'Tulis Artikel / SOP Baru',
     'Tenants': 'Tenant', 'Users': 'Pengguna', 'Profile': 'Profil', 'Settings': 'Pengaturan',
     'Customer Service': 'Layanan Pelanggan', 'Logout': 'Keluar', 'Search': 'Cari',
     'Search...': 'Cari...', 'Notifications': 'Notifikasi', 'Mark all as read': 'Tandai semua telah dibaca',

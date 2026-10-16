@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Article;
 use App\Models\Course;
 use App\Models\Lesson;
 use App\Models\User;
@@ -50,6 +51,47 @@ class SearchController extends Controller
             ->get()
             ->map(fn($l) => ['type' => 'lesson', 'item' => $l, 'url' => $user->hasRole('student') ? route('student.lessons.view', ['course' => $l->section->course, 'lesson' => $l]) : '#']);
             $results = $results->concat($lessons);
+        }
+
+        if ($type === 'all' || $type === 'articles') {
+            $articlesQuery = Article::query();
+            if (!$user->hasRole('superadmin')) {
+                $articlesQuery->where('tenant_id', $tenantId);
+            }
+            if (!$user->hasRole(['superadmin', 'tenant_admin'])) {
+                $articlesQuery->where(function ($q) use ($user) {
+                    $q->where('status', 'published')->orWhere('author_id', $user->id);
+                });
+            }
+
+            $articles = $articlesQuery->where(function ($query) use ($searchTerm) {
+                $query->whereRaw("search_vector @@ websearch_to_tsquery('simple', ?)", [$searchTerm])
+                    ->orWhereRaw("LOWER(title) LIKE ?", ['%' . strtolower($searchTerm) . '%'])
+                    ->orWhereRaw("LOWER(excerpt) LIKE ?", ['%' . strtolower($searchTerm) . '%'])
+                    ->orWhereRaw("LOWER(content) LIKE ?", ['%' . strtolower($searchTerm) . '%']);
+            })
+            ->selectRaw("
+                articles.*,
+                ts_rank_cd(search_vector, websearch_to_tsquery('simple', ?)) as rank,
+                ts_headline(
+                    'simple',
+                    regexp_replace(articles.content, '<[^>]*>', ' ', 'g'),
+                    websearch_to_tsquery('simple', ?),
+                    'StartSel=<mark>, StopSel=</mark>, MaxWords=35, MinWords=15, HighlightAll=false'
+                ) as search_snippet
+            ", [$searchTerm, $searchTerm])
+            ->with(['category', 'tags', 'author'])
+            ->orderByDesc('rank')
+            ->latest('published_at')
+            ->get()
+            ->map(fn($a) => [
+                'type' => 'article',
+                'item' => $a,
+                'snippet' => $a->search_snippet ?: $a->excerpt,
+                'url' => route('articles.show', $a),
+            ]);
+
+            $results = $results->concat($articles);
         }
 
         if ($type === 'all' || $type === 'users') {

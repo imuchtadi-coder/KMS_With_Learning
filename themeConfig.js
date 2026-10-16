@@ -30,7 +30,7 @@ export const { themeConfig, layoutConfig } = defineThemeConfig({
       ],
     },
     theme: 'system',
-    skin: Skins.Default,
+    skin: Skins.Bordered,
     iconRenderer: VIcon,
   },
   navbar: {
@@ -40,7 +40,7 @@ export const { themeConfig, layoutConfig } = defineThemeConfig({
   footer: { type: FooterType.Static },
   verticalNav: {
     isVerticalNavCollapsed: false,
-    defaultNavItemIconProps: { icon: 'tabler-circle' },
+    defaultNavItemIconProps: { icon: 'mdi-circle-outline' },
     isVerticalNavSemiDark: false,
   },
   horizontalNav: {
@@ -51,14 +51,14 @@ export const { themeConfig, layoutConfig } = defineThemeConfig({
 
   /*
     // ℹ️  In below Icons section, you can specify icon for each component. Also you can use other props of v-icon component like `color` and `size` for each icon.
-    // Such as: chevronDown: { icon: 'tabler-chevron-down', color:'primary', size: '24' },
+    // Such as: chevronDown: { icon: 'mdi-chevron-down', color:'primary', size: '24' },
     */
   icons: {
-    chevronDown: { icon: 'tabler-chevron-down' },
-    chevronRight: { icon: 'tabler-chevron-right', size: 20 },
-    close: { icon: 'tabler-x', size: 20 },
-    verticalNavPinned: { icon: 'tabler-circle-dot', size: 20 },
-    verticalNavUnPinned: { icon: 'tabler-circle', size: 20 },
-    sectionTitlePlaceholder: { icon: 'tabler-minus' },
+    chevronDown: { icon: 'mdi-chevron-down' },
+    chevronRight: { icon: 'mdi-chevron-right', size: 20 },
+    close: { icon: 'mdi-close', size: 20 },
+    verticalNavPinned: { icon: 'mdi-radiobox-marked', size: 20 },
+    verticalNavUnPinned: { icon: 'mdi-radiobox-blank', size: 20 },
+    sectionTitlePlaceholder: { icon: 'mdi-minus' },
   },
 })

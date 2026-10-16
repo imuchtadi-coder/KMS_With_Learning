@@ -9,7 +9,29 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class Tenant extends StanclTenant
 {
-    protected $fillable = ['id', 'name', 'data'];
+    protected $fillable = [
+        'id',
+        'name',
+        'status',
+        'contact_person',
+        'phone',
+        'notes',
+        'plan_id',
+        'payment_method',
+        'payment_proof',
+        'payment_status',
+        'amount_paid',
+        'paid_at',
+        'data',
+    ];
+
+    /**
+     * Get the subscription plan for this tenant
+     */
+    public function plan()
+    {
+        return $this->belongsTo(SubscriptionPlan::class, 'plan_id', 'id');
+    }
 
     /**
      * Get all domains for this tenant

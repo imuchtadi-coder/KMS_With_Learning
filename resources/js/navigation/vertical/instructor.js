@@ -1,21 +1,14 @@
 export default [
-  // {
-  //   title: 'Teaching',
-  //   icon: { icon: 'tabler-school' },
-  //   href: '/instructor',
-  //   action: 'instructor',
-  //   subject: 'role',
-  // },
   {
     title: 'My Courses',
-    icon: { icon: 'tabler-books' },
+    icon: { icon: 'mdi-book-multiple-outline' },
     href: '/instructor/courses',
     action: 'instructor',
     subject: 'role',
   },
   {
     title: 'Assessment Analytics',
-    icon: { icon: 'tabler-chart-Infographic' },
+    icon: { icon: 'mdi-chart-box-outline' },
     href: '/instructor/assessment-analytics',
     action: 'instructor',
     subject: 'role',

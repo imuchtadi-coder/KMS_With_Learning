@@ -195,7 +195,7 @@ const submit = () => {
 }
 </script>
 
-<style lang="scss">
+<style lang="scss" scoped>
 .auth-page {
   --auth-green: #1f6b45;
   --auth-green-dark: #185637;

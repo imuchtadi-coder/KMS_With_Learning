@@ -119,12 +119,29 @@ class StudentCourseController extends Controller
             ->orderBy('name')
             ->get();
 
+        $totalCoursesCount = Course::where('published', true)
+            ->where('tenant_id', $user->tenant_id)
+            ->count();
+
+        $enrolledCount = Enrollment::where('user_id', $user->id)
+            ->whereHas('course', function ($q) use ($user) {
+                $q->where('published', true)->where('tenant_id', $user->tenant_id);
+            })
+            ->count();
+
+        $categoriesCount = Category::where('tenant_id', $user->tenant_id)->count();
+
         return inertia('Student/Courses/Index', [
             'courses' => $courses,
             'categories' => $categories,
             'tags' => $tags,
             'tenantName' => $user->tenant?->name ?? 'Platform',
             'filters' => $request->only(['search', 'level', 'category_id', 'tag_id']),
+            'stats' => [
+                'total_courses' => $totalCoursesCount,
+                'enrolled_courses' => $enrolledCount,
+                'categories_count' => $categoriesCount,
+            ],
         ]);
     }
 
@@ -253,6 +270,8 @@ class StudentCourseController extends Controller
 
                 $data = $resource->toArray(request());
                 $data['enrollment_id'] = $enrollment->id;
+                $data['enrolled_at'] = $enrollment->created_at?->toISOString();
+                $data['completed_at'] = $enrollment->completed_at?->toISOString();
 
                 return $data;
             })->values();

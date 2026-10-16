@@ -12,16 +12,28 @@ use Inertia\Inertia;
 
 class StudentLearningPathController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
         $user = auth()->user();
         $tenantId = auth()->user()->tenant_id;
 
-        $publishedPaths = LearningPath::where('tenant_id', $tenantId)
+        $search = $request->query('search');
+
+        $query = LearningPath::where('tenant_id', $tenantId)
             ->whereNotNull('published_at')
             ->where('published_at', '<=', now())
-            ->with('courses')
-            ->paginate(10);
+            ->with(['courses' => function ($q) {
+                $q->withCount('sections');
+            }]);
+
+        if ($search) {
+            $query->where(function ($q) use ($search) {
+                $q->where('title', 'like', "%{$search}%")
+                    ->orWhere('description', 'like', "%{$search}%");
+            });
+        }
+
+        $publishedPaths = $query->orderBy('created_at', 'desc')->paginate(9)->withQueryString();
 
         $enrolledPathIds = LearningPathEnrollment::where('user_id', $user->id)
             ->where('tenant_id', $tenantId)
@@ -32,12 +44,31 @@ class StudentLearningPathController extends Controller
             $path->progress = $path->getUserProgress($user);
         }
 
+        $allEnrolledCount = $enrolledPathIds->count();
+        $totalPublishedCount = LearningPath::where('tenant_id', $tenantId)
+            ->whereNotNull('published_at')
+            ->where('published_at', '<=', now())
+            ->count();
+
+        $allCompletedCount = LearningPathEnrollment::where('user_id', $user->id)
+            ->where('tenant_id', $tenantId)
+            ->whereNotNull('completed_at')
+            ->count();
+
         $recommendationService = new LearningPathRecommendationService;
         $recommendations = $recommendationService->getDashboardRecommendations($user, 3);
 
         return Inertia::render('Student/LearningPaths/Index', [
             'learningPaths' => $publishedPaths,
             'recommendations' => $recommendations,
+            'filters' => [
+                'search' => $search ?? '',
+            ],
+            'stats' => [
+                'total_paths' => $totalPublishedCount,
+                'enrolled_paths' => $allEnrolledCount,
+                'completed_paths' => $allCompletedCount,
+            ],
         ]);
     }
 
@@ -52,7 +83,9 @@ class StudentLearningPathController extends Controller
             abort(404);
         }
 
-        $learningPath->load('courses');
+        $learningPath->load(['courses' => function ($q) {
+            $q->withCount('sections');
+        }]);
 
         $enrollment = LearningPathEnrollment::where('learning_path_id', $learningPath->id)
             ->where('user_id', $user->id)
@@ -190,11 +223,14 @@ class StudentLearningPathController extends Controller
         $tenantId = $user->tenant_id;
 
         $enrollments = LearningPathEnrollment::with([
-            'learningPath.courses',
+            'learningPath.courses' => function ($q) {
+                $q->withCount('sections');
+            },
             'progress',
         ])
             ->where('user_id', $user->id)
             ->where('tenant_id', $tenantId)
+            ->orderBy('started_at', 'desc')
             ->get()
             ->map(function ($enrollment) {
                 $total = $enrollment->learningPath?->courses->count() ?? 0;
@@ -219,15 +255,24 @@ class StudentLearningPathController extends Controller
                         ? [
                             'id' => $enrollment->learningPath->id,
                             'title' => $enrollment->learningPath->title,
-
+                            'description' => $enrollment->learningPath->description,
                             'courses' => $enrollment->learningPath->courses,
                         ]
                         : null,
                 ];
             });
 
+        $totalEnrolled = $enrollments->count();
+        $totalCompleted = $enrollments->where('progress', 100)->count();
+        $inProgress = $totalEnrolled - $totalCompleted;
+
         return Inertia::render('Student/LearningPaths/MyPaths', [
             'enrollments' => $enrollments,
+            'stats' => [
+                'total_enrolled' => $totalEnrolled,
+                'in_progress' => max(0, $inProgress),
+                'completed' => $totalCompleted,
+            ],
         ]);
     }
 }

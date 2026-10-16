@@ -1,114 +1,492 @@
 <script setup>
 import { router } from '@inertiajs/vue3'
+import { ref, computed } from 'vue'
 
 const props = defineProps({
   learningPaths: { type: Object, required: true },
   recommendations: { type: Array, default: () => [] },
+  filters: { type: Object, default: () => ({ search: '' }) },
+  stats: {
+    type: Object,
+    default: () => ({
+      total_paths: 0,
+      enrolled_paths: 0,
+      completed_paths: 0,
+    }),
+  },
 })
 
+const searchQuery = ref(props.filters?.search || '')
+const selectedFilter = ref('all') // 'all', 'enrolled', 'not_enrolled', 'completed'
+const isEnrolling = ref(null)
+
+function handleSearch() {
+  router.get(
+    route('student.learning-paths.index'),
+    { search: searchQuery.value },
+    { preserveState: true, replace: true }
+  )
+}
+
+function clearSearch() {
+  searchQuery.value = ''
+  handleSearch()
+}
+
+function handlePageChange(page) {
+  router.get(
+    route('student.learning-paths.index'),
+    { search: searchQuery.value, page },
+    { preserveState: true, preserveScroll: true }
+  )
+}
+
 function enroll(pathId) {
+  isEnrolling.value = pathId
   router.post(route('student.learning-paths.enroll', pathId), {}, {
     preserveScroll: true,
+    onFinish: () => {
+      isEnrolling.value = null
+    },
   })
 }
+
+const filteredPaths = computed(() => {
+  const items = props.learningPaths?.data || []
+  if (selectedFilter.value === 'enrolled') {
+    return items.filter(p => p.isEnrolled && (p.progress ?? 0) < 100)
+  }
+  if (selectedFilter.value === 'completed') {
+    return items.filter(p => p.isEnrolled && (p.progress ?? 0) === 100)
+  }
+  if (selectedFilter.value === 'not_enrolled') {
+    return items.filter(p => !p.isEnrolled)
+  }
+  return items
+})
 </script>
 
 <template>
-  <div>
-    <div class="mb-8">
-      <h4 class="text-h4 font-weight-bold">Learning Paths</h4>
-      <p class="text-body-1 text-medium-emphasis">Structured curriculum to master new skills</p>
-    </div>
+  <div class="learning-paths-container">
+    <!-- Header Hero Banner -->
+    <VCard flat border class="mb-6 rounded-xl overflow-hidden bg-surface">
+      <div class="pa-6 pa-md-8">
+        <div class="d-flex flex-column flex-md-row justify-space-between align-start align-md-center ga-4">
+          <div class="d-flex align-center ga-4">
+            <VAvatar
+              size="56"
+              color="primary"
+              variant="tonal"
+              rounded="lg"
+              class="elevation-1"
+            >
+              <VIcon icon="mdi-map-marker-path" size="32" color="primary" />
+            </VAvatar>
+            <div>
+              <div class="d-flex align-center ga-2 flex-wrap">
+                <h4 class="text-h4 font-weight-bold text-high-emphasis mb-0">
+                  Jalur Belajar
+                </h4>
+                <VChip size="small" color="primary" variant="tonal" label class="font-weight-medium">
+                  Kurikulum Terstruktur
+                </VChip>
+              </div>
+              <p class="text-body-2 text-medium-emphasis mt-1 mb-0">
+                Kuasai kompetensi terarah melalui rangkaian kursus bertahap yang telah dirancang para pakar.
+              </p>
+            </div>
+          </div>
 
-    <VTabs
-      color="primary"
-      class="mb-6"
-    >
-      <VTab
-        :href="route('student.learning-paths.index')"
-        :active="true"
-      >
-        All Paths
-      </VTab>
-      <VTab :href="route('student.learning-paths.my-paths')">
-        My Learning
-      </VTab>
-    </VTabs>
+          <!-- Quick Navigation Pill Tabs -->
+          <div class="d-flex align-center ga-2 bg-background pa-1 rounded-pill border">
+            <VBtn
+              size="small"
+              variant="flat"
+              color="primary"
+              rounded="pill"
+              class="text-capitalize px-4"
+              :href="route('student.learning-paths.index')"
+            >
+              <VIcon start icon="mdi-compass-outline" size="18" />
+              Semua Jalur
+            </VBtn>
+            <VBtn
+              size="small"
+              variant="text"
+              color="default"
+              rounded="pill"
+              class="text-capitalize px-4"
+              :href="route('student.learning-paths.my-paths')"
+            >
+              <VIcon start icon="mdi-book-account-outline" size="18" />
+              Jalur Saya
+              <VBadge
+                v-if="stats.enrolled_paths > 0"
+                :content="stats.enrolled_paths"
+                color="primary"
+                inline
+                class="ms-1"
+              />
+            </VBtn>
+          </div>
+        </div>
 
+        <!-- Quick Stats Overview -->
+        <VDivider class="my-6" />
+
+        <VRow>
+          <VCol cols="12" sm="4">
+            <div class="d-flex align-center ga-3 pa-3 rounded-lg bg-background border">
+              <VAvatar color="primary" variant="tonal" size="42" rounded="lg">
+                <VIcon icon="mdi-map-marker-distance" size="22" />
+              </VAvatar>
+              <div>
+                <div class="text-caption text-medium-emphasis font-weight-medium">Total Jalur Belajar</div>
+                <div class="text-h6 font-weight-bold">{{ stats.total_paths || learningPaths.total || 0 }}</div>
+              </div>
+            </div>
+          </VCol>
+
+          <VCol cols="12" sm="4">
+            <div class="d-flex align-center ga-3 pa-3 rounded-lg bg-background border">
+              <VAvatar color="warning" variant="tonal" size="42" rounded="lg">
+                <VIcon icon="mdi-progress-clock" size="22" />
+              </VAvatar>
+              <div>
+                <div class="text-caption text-medium-emphasis font-weight-medium">Sedang Dipelajari</div>
+                <div class="text-h6 font-weight-bold text-warning">{{ stats.enrolled_paths || 0 }}</div>
+              </div>
+            </div>
+          </VCol>
+
+          <VCol cols="12" sm="4">
+            <div class="d-flex align-center ga-3 pa-3 rounded-lg bg-background border">
+              <VAvatar color="success" variant="tonal" size="42" rounded="lg">
+                <VIcon icon="mdi-check-decagram" size="22" />
+              </VAvatar>
+              <div>
+                <div class="text-caption text-medium-emphasis font-weight-medium">Jalur Tuntas</div>
+                <div class="text-h6 font-weight-bold text-success">{{ stats.completed_paths || 0 }}</div>
+              </div>
+            </div>
+          </VCol>
+        </VRow>
+      </div>
+    </VCard>
+
+    <!-- Toolbar: Search & Filter Tabs -->
+    <VCard flat border class="mb-6 rounded-xl pa-4 bg-surface">
+      <div class="d-flex flex-column flex-md-row justify-space-between align-stretch align-md-center ga-3">
+        <!-- Filter Chips -->
+        <div class="d-flex align-center ga-2 flex-wrap">
+          <span class="text-caption text-medium-emphasis font-weight-bold text-uppercase me-1">Filter:</span>
+          <VChip
+            filter
+            size="small"
+            :variant="selectedFilter === 'all' ? 'flat' : 'outlined'"
+            :color="selectedFilter === 'all' ? 'primary' : 'default'"
+            @click="selectedFilter = 'all'"
+          >
+            Semua
+          </VChip>
+          <VChip
+            filter
+            size="small"
+            :variant="selectedFilter === 'enrolled' ? 'flat' : 'outlined'"
+            :color="selectedFilter === 'enrolled' ? 'warning' : 'default'"
+            @click="selectedFilter = 'enrolled'"
+          >
+            Sedang Berjalan
+          </VChip>
+          <VChip
+            filter
+            size="small"
+            :variant="selectedFilter === 'completed' ? 'flat' : 'outlined'"
+            :color="selectedFilter === 'completed' ? 'success' : 'default'"
+            @click="selectedFilter = 'completed'"
+          >
+            Selesai
+          </VChip>
+          <VChip
+            filter
+            size="small"
+            :variant="selectedFilter === 'not_enrolled' ? 'flat' : 'outlined'"
+            :color="selectedFilter === 'not_enrolled' ? 'secondary' : 'default'"
+            @click="selectedFilter = 'not_enrolled'"
+          >
+            Belum Diikuti
+          </VChip>
+        </div>
+
+        <!-- Search Bar -->
+        <div style="min-width: 280px; max-width: 380px;">
+          <VTextField
+            v-model="searchQuery"
+            placeholder="Cari jalur belajar..."
+            density="compact"
+            variant="outlined"
+            hide-details
+            clearable
+            prepend-inner-icon="mdi-magnify"
+            @keyup.enter="handleSearch"
+            @click:clear="clearSearch"
+          />
+        </div>
+      </div>
+    </VCard>
+
+    <!-- Path Cards Grid -->
     <VRow>
       <VCol
-        v-for="path in learningPaths.data"
+        v-for="path in filteredPaths"
         :key="path.id"
         cols="12"
         md="6"
         lg="4"
       >
-        <VCard flat border>
-          <div class="pa-6 bg-primary text-white rounded-t">
-            <h5 class="text-h5 text-white font-weight-bold">{{ path.title }}</h5>
-            <p class="text-body-2 text-white opacity-75 mt-1">{{ path.courses?.length || 0 }} courses</p>
-          </div>
-          <VCardText>
-            <p class="text-body-2 text-medium-emphasis mb-4">{{ path.description?.substring(0, 100) }}{{ path.description?.length > 100 ? '...' : '' }}</p>
-
-            <div class="mb-4 ga-2 d-flex flex-column">
-              <div
-                v-for="course in (path.courses || []).slice(0, 3)"
-                :key="course.id"
-                class="d-flex align-center ga-2 text-body-2"
+        <VCard
+          flat
+          border
+          class="h-100 d-flex flex-column rounded-xl path-card transition-swing"
+        >
+          <!-- Top Card Meta Header -->
+          <div class="pa-5 pb-3">
+            <div class="d-flex justify-space-between align-center mb-3">
+              <VChip
+                size="small"
+                variant="tonal"
+                color="primary"
+                label
+                class="font-weight-medium"
               >
-                <VIcon icon="mdi-check-circle" color="success" size="18" />
-                <span class="text-truncate">{{ course.title }}</span>
+                <VIcon start icon="mdi-book-multiple-outline" size="14" />
+                {{ path.courses?.length || 0 }} Kursus
+              </VChip>
+
+              <VChip
+                v-if="path.isEnrolled && path.progress === 100"
+                size="small"
+                color="success"
+                variant="flat"
+                label
+                class="font-weight-bold"
+              >
+                <VIcon start icon="mdi-check-circle" size="14" />
+                Selesai
+              </VChip>
+              <VChip
+                v-else-if="path.isEnrolled && path.progress > 0"
+                size="small"
+                color="warning"
+                variant="tonal"
+                label
+                class="font-weight-bold"
+              >
+                <VIcon start icon="mdi-progress-clock" size="14" />
+                {{ path.progress }}% Selesai
+              </VChip>
+              <VChip
+                v-else-if="path.isEnrolled"
+                size="small"
+                color="info"
+                variant="tonal"
+                label
+                class="font-weight-medium"
+              >
+                Terdaftar
+              </VChip>
+              <VChip
+                v-else
+                size="small"
+                color="secondary"
+                variant="tonal"
+                label
+                class="font-weight-medium"
+              >
+                Tersedia
+              </VChip>
+            </div>
+
+            <!-- Path Title -->
+            <h5
+              class="text-h6 font-weight-bold text-high-emphasis mb-2 line-clamp-2"
+              :title="path.title"
+            >
+              {{ path.title }}
+            </h5>
+
+            <!-- Path Description -->
+            <p class="text-body-2 text-medium-emphasis mb-3 line-clamp-2" style="min-height: 40px;">
+              {{ path.description || 'Pelajari kurikulum komprehensif ini untuk meningkatkan kemampuan Anda secara bertahap.' }}
+            </p>
+          </div>
+
+          <VDivider />
+
+          <!-- Mini Syllabus Roadmap -->
+          <VCardText class="pa-5 flex-grow-1">
+            <div class="d-flex align-center justify-space-between mb-3">
+              <span class="text-caption font-weight-bold text-uppercase text-medium-emphasis">
+                Alur Kursus
+              </span>
+              <span class="text-caption text-medium-emphasis">
+                {{ path.courses?.length || 0 }} Modul Terangkai
+              </span>
+            </div>
+
+            <div class="d-flex flex-column ga-2 mb-4">
+              <div
+                v-for="(course, idx) in (path.courses || []).slice(0, 3)"
+                :key="course.id"
+                class="d-flex align-center ga-3 pa-2 rounded-lg bg-background border"
+              >
+                <VAvatar
+                  size="24"
+                  :color="path.isEnrolled && path.progress === 100 ? 'success' : 'primary'"
+                  variant="tonal"
+                  class="text-caption font-weight-bold"
+                >
+                  {{ idx + 1 }}
+                </VAvatar>
+                <div class="text-body-2 font-weight-medium text-truncate flex-grow-1">
+                  {{ course.title }}
+                </div>
+                <div v-if="course.sections_count" class="text-caption text-medium-emphasis">
+                  {{ course.sections_count }} sesi
+                </div>
               </div>
-              <div v-if="(path.courses || []).length > 3" class="text-caption text-medium-emphasis">
-                + {{ path.courses.length - 3 }} more courses
+
+              <!-- More courses chip -->
+              <div
+                v-if="(path.courses || []).length > 3"
+                class="text-caption text-medium-emphasis text-center py-1 bg-background rounded border border-dashed"
+              >
+                + {{ path.courses.length - 3 }} kursus lanjutan lainnya
               </div>
             </div>
 
-            <div v-if="path.isEnrolled" class="mb-4">
-              <div class="d-flex justify-space-between mb-1">
-                <span class="text-caption font-weight-medium">Progress</span>
-                <span class="text-caption font-weight-bold text-primary">{{ path.progress }}%</span>
+            <!-- Progress Bar (if enrolled) -->
+            <div v-if="path.isEnrolled" class="mt-auto pt-2">
+              <div class="d-flex justify-space-between align-center mb-1">
+                <span class="text-caption text-medium-emphasis font-weight-medium">Kemajuan Belajar</span>
+                <span class="text-caption font-weight-bold text-primary">{{ path.progress || 0 }}%</span>
               </div>
               <VProgressLinear
-                :model-value="path.progress"
+                :model-value="path.progress || 0"
                 color="primary"
                 height="6"
                 rounded
+                bg-opacity="0.15"
               />
             </div>
-
-            <VBtn
-              block
-              :color="path.isEnrolled ? 'primary' : 'success'"
-              variant="elevated"
-              :href="path.isEnrolled ? route('student.learning-paths.show', path.id) : undefined"
-              @click="!path.isEnrolled ? enroll(path.id) : undefined"
-            >
-              {{ path.isEnrolled ? 'Continue Learning' : 'Start Path' }}
-            </VBtn>
-
-            <VBtn
-              block
-              variant="text"
-              color="primary"
-              class="mt-2"
-              :href="route('student.learning-paths.show', path.id)"
-            >
-              View Details
-            </VBtn>
           </VCardText>
+
+          <VDivider />
+
+          <!-- Card Actions Footer -->
+          <VCardActions class="pa-4 bg-background">
+            <div class="d-flex ga-2 w-100">
+              <VBtn
+                v-if="path.isEnrolled"
+                color="primary"
+                variant="elevated"
+                class="flex-grow-1 font-weight-medium"
+                :href="route('student.learning-paths.show', path.id)"
+              >
+                <VIcon start icon="mdi-play-circle" size="18" />
+                {{ path.progress === 100 ? 'Review Kurikulum' : 'Lanjutkan Belajar' }}
+              </VBtn>
+
+              <VBtn
+                v-else
+                color="primary"
+                variant="elevated"
+                class="flex-grow-1 font-weight-medium"
+                :loading="isEnrolling === path.id"
+                @click="enroll(path.id)"
+              >
+                <VIcon start icon="mdi-lightning-bolt" size="18" />
+                Ikuti Jalur Belajar
+              </VBtn>
+
+              <VBtn
+                variant="tonal"
+                color="default"
+                icon
+                rounded="lg"
+                title="Lihat Detail Jalur"
+                :href="route('student.learning-paths.show', path.id)"
+              >
+                <VIcon icon="mdi-arrow-right" size="20" />
+              </VBtn>
+            </div>
+          </VCardActions>
         </VCard>
       </VCol>
+
+      <!-- Empty State -->
       <VCol
-        v-if="learningPaths.data?.length === 0"
+        v-if="filteredPaths.length === 0"
         cols="12"
-        class="text-center pa-8"
       >
-        <VIcon icon="mdi-map-marker-path" size="64" color="disabled" />
-        <h5 class="text-h5 mt-4">No Learning Paths Available</h5>
-        <p class="text-body-2 text-medium-emphasis">Check back soon for new learning paths!</p>
+        <VCard flat border class="pa-12 text-center rounded-xl bg-surface">
+          <VAvatar size="72" color="primary" variant="tonal" class="mb-4">
+            <VIcon icon="mdi-map-marker-path" size="40" color="primary" />
+          </VAvatar>
+          <h5 class="text-h5 font-weight-bold mb-2">
+            {{ searchQuery ? 'Tidak Ada Jalur Belajar yang Cocok' : 'Belum Ada Jalur Belajar' }}
+          </h5>
+          <p class="text-body-2 text-medium-emphasis mx-auto mb-6" style="max-width: 480px;">
+            {{ searchQuery
+              ? `Tidak ditemukan jalur belajar dengan kata kunci "${searchQuery}". Silakan coba kata kunci lain atau reset pencarian.`
+              : 'Jalur belajar terstruktur belum dirilis oleh instruktur. Silakan periksa kembali beberapa saat lagi.'
+            }}
+          </p>
+          <VBtn
+            v-if="searchQuery"
+            variant="tonal"
+            color="primary"
+            prepend-icon="mdi-refresh"
+            @click="clearSearch"
+          >
+            Reset Pencarian
+          </VBtn>
+        </VCard>
       </VCol>
     </VRow>
+
+    <!-- Pagination -->
+    <div
+      v-if="learningPaths.last_page > 1"
+      class="d-flex justify-center mt-8"
+    >
+      <VPagination
+        :model-value="learningPaths.current_page"
+        :length="learningPaths.last_page"
+        :total-visible="5"
+        rounded="circle"
+        density="comfortable"
+        active-color="primary"
+        @update:model-value="handlePageChange"
+      />
+    </div>
   </div>
 </template>
+
+<style scoped>
+.path-card {
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+}
+.path-card:hover {
+  transform: translateY(-3px);
+  border-color: rgba(var(--v-theme-primary), 0.4) !important;
+  box-shadow: 0 8px 24px -4px rgba(0, 0, 0, 0.08) !important;
+}
+
+.line-clamp-2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+</style>

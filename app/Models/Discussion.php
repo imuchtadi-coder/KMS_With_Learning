@@ -12,13 +12,17 @@ class Discussion extends Model
     use SoftDeletes;
 
     protected $fillable = [
+        'tenant_id',
         'course_id',
         'lesson_id',
+        'category_id',
         'title',
         'content',
         'created_by',
         'is_pinned',
         'is_locked',
+        'is_resolved',
+        'accepted_reply_id',
     ];
 
     protected function casts(): array
@@ -26,7 +30,18 @@ class Discussion extends Model
         return [
             'is_pinned' => 'boolean',
             'is_locked' => 'boolean',
+            'is_resolved' => 'boolean',
         ];
+    }
+
+    public function tenant(): BelongsTo
+    {
+        return $this->belongsTo(Tenant::class, 'tenant_id', 'id');
+    }
+
+    public function category(): BelongsTo
+    {
+        return $this->belongsTo(Category::class);
     }
 
     public function course(): BelongsTo
@@ -52,5 +67,30 @@ class Discussion extends Model
     public function latestReply()
     {
         return $this->hasOne(DiscussionReply::class)->latestOfMany();
+    }
+
+    public function acceptedReply(): BelongsTo
+    {
+        return $this->belongsTo(DiscussionReply::class, 'accepted_reply_id');
+    }
+
+    public function scopeGeneral($query)
+    {
+        return $query->whereNull('course_id');
+    }
+
+    public function scopeCourseSpecific($query)
+    {
+        return $query->whereNotNull('course_id');
+    }
+
+    public function scopeResolved($query)
+    {
+        return $query->where('is_resolved', true);
+    }
+
+    public function scopeUnresolved($query)
+    {
+        return $query->where('is_resolved', false);
     }
 }

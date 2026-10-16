@@ -14,7 +14,18 @@ class DiscussionReply extends Model
         'discussion_id',
         'content',
         'created_by',
+        'is_solution',
+        'verified_at',
+        'verified_by',
     ];
+
+    protected function casts(): array
+    {
+        return [
+            'is_solution' => 'boolean',
+            'verified_at' => 'datetime',
+        ];
+    }
 
     public function discussion(): BelongsTo
     {
@@ -24,5 +35,10 @@ class DiscussionReply extends Model
     public function creator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');
+    }
+
+    public function verifiedBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'verified_by');
     }
 }

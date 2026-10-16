@@ -7,6 +7,7 @@ use App\Http\Controllers\Admin\CategoryController;
 use App\Http\Controllers\Admin\GamificationController;
 use App\Http\Controllers\Admin\TagController;
 use App\Http\Controllers\AdminController;
+use App\Http\Controllers\ArticleController;
 use App\Http\Controllers\AssessmentAnalyticsController;
 use App\Http\Controllers\CertificateController;
 use App\Http\Controllers\DiscussionController;
@@ -35,19 +36,26 @@ use App\Http\Controllers\StudentLiveClassController;
 use App\Http\Controllers\StudentQuizController;
 use App\Http\Controllers\UserProfileController;
 use App\Http\Controllers\VideoController;
+use App\Http\Controllers\DemoController;
+use App\Http\Controllers\LandingController;
+use App\Http\Controllers\TenantRegistrationController;
 use App\Http\Controllers\WebAuthController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
-Route::get('/', function () {
-    return redirect('/login');
-});
+// Public Landing Page & Demo Routes
+Route::get('/', [LandingController::class, 'index'])->name('landing');
+Route::post('/demo/login', [DemoController::class, 'quickLogin'])->name('demo.login');
+
+// Tenant Self-Registration (Pending Super Admin Approval)
+Route::get('/register-tenant', [TenantRegistrationController::class, 'create'])->name('register-tenant');
+Route::post('/register-tenant', [TenantRegistrationController::class, 'store'])->name('register-tenant.store');
 
 Route::middleware('guest')->group(function () {
     Route::get('/login', [WebAuthController::class, 'showLoginForm'])->name('login');
     Route::post('/login', [WebAuthController::class, 'login']);
-    // Route::get('/register', [WebAuthController::class, 'showRegisterForm'])->name('register');
-    // Route::post('/register', [WebAuthController::class, 'register']);
+    Route::get('/register', [WebAuthController::class, 'showRegisterForm'])->name('register');
+    Route::post('/register', [WebAuthController::class, 'register']);
 });
 
 // Authenticated routes
@@ -55,7 +63,7 @@ Route::middleware('auth')->group(function () {
     Route::post('/logout', [WebAuthController::class, 'logout'])->name('logout');
 
     // Dashboard route - redirect based on role
-    Route::get('/', [WebAuthController::class, 'dashboard'])->name('dashboard');
+    Route::get('/dashboard', [WebAuthController::class, 'dashboard'])->name('dashboard');
 
     // User Profile routes
     Route::get('/profile', [UserProfileController::class, 'show'])->name('profile.show');
@@ -147,9 +155,18 @@ Route::middleware('auth')->group(function () {
         Route::get('/admin/tenants', [AdminController::class, 'tenants'])->name('admin.tenants.index');
         Route::get('/admin/tenants/create', [AdminController::class, 'createTenant'])->name('admin.tenants.create');
         Route::post('/admin/tenants', [AdminController::class, 'storeTenant'])->name('admin.tenants.store');
+        Route::post('/admin/tenants/{tenant}/approve', [AdminController::class, 'approveTenant'])->name('admin.tenants.approve');
+        Route::post('/admin/tenants/{tenant}/reject', [AdminController::class, 'rejectTenant'])->name('admin.tenants.reject');
         Route::get('/admin/tenants/{tenant}/edit', [AdminController::class, 'editTenant'])->name('admin.tenants.edit');
         Route::put('/admin/tenants/{tenant}', [AdminController::class, 'updateTenant'])->name('admin.tenants.update');
         Route::delete('/admin/tenants/{tenant}', [AdminController::class, 'deleteTenant'])->name('admin.tenants.delete');
+
+        // Subscription Plans & Pricing management (Superadmin)
+        Route::get('/admin/subscription-plans', [\App\Http\Controllers\Admin\SubscriptionPlanController::class, 'index'])->name('admin.subscription-plans.index');
+        Route::post('/admin/subscription-plans', [\App\Http\Controllers\Admin\SubscriptionPlanController::class, 'store'])->name('admin.subscription-plans.store');
+        Route::put('/admin/subscription-plans/{plan}', [\App\Http\Controllers\Admin\SubscriptionPlanController::class, 'update'])->name('admin.subscription-plans.update');
+        Route::delete('/admin/subscription-plans/{plan}', [\App\Http\Controllers\Admin\SubscriptionPlanController::class, 'destroy'])->name('admin.subscription-plans.destroy');
+        Route::put('/admin/payment-methods/{paymentMethod}', [\App\Http\Controllers\Admin\SubscriptionPlanController::class, 'updatePaymentMethod'])->name('admin.payment-methods.update');
     });
 
     // Instructor routes
@@ -270,6 +287,15 @@ Route::middleware('auth')->group(function () {
     // Search routes (all authenticated users)
     Route::get('/search', [SearchController::class, 'index'])->name('search.index');
 
+    // Knowledge Base / Articles routes (all authenticated users)
+    Route::get('/articles/attachments/{attachment}/download', [ArticleController::class, 'downloadAttachment'])->name('articles.attachments.download');
+    Route::delete('/articles/attachments/{attachment}', [ArticleController::class, 'deleteAttachment'])->name('articles.attachments.destroy');
+    Route::post('/articles/{article}/submit-review', [ArticleController::class, 'submitReview'])->name('articles.submit-review');
+    Route::post('/articles/{article}/approve', [ArticleController::class, 'approve'])->name('articles.approve');
+    Route::post('/articles/{article}/reject', [ArticleController::class, 'reject'])->name('articles.reject');
+    Route::post('/articles/{article}/versions/{version}/restore', [ArticleController::class, 'restoreVersion'])->name('articles.versions.restore');
+    Route::resource('articles', ArticleController::class);
+
     // Discussion routes (all authenticated users)
     Route::resource('discussions', DiscussionController::class)->except(['show']);
     Route::get('/discussions/{discussion}', [DiscussionController::class, 'show'])->name('discussions.show');
@@ -280,6 +306,7 @@ Route::middleware('auth')->group(function () {
     Route::post('/discussions/{discussion}/replies', [DiscussionReplyController::class, 'store'])->name('discussions.replies.store');
     Route::put('/discussions/{discussion}/replies/{reply}', [DiscussionReplyController::class, 'update'])->name('discussions.replies.update');
     Route::delete('/discussions/{discussion}/replies/{reply}', [DiscussionReplyController::class, 'destroy'])->name('discussions.replies.destroy');
+    Route::post('/discussions/{discussion}/replies/{reply}/solution', [DiscussionReplyController::class, 'toggleSolution'])->name('discussions.replies.solution');
 
     // Student routes
     Route::middleware([\App\Http\Middleware\InitializeTenancyByDomainOrAuthenticatedTenant::class, 'role:student',])->group(function () {

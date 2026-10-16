@@ -14,7 +14,7 @@ class UserProfileController extends Controller
      */
     public function show()
     {
-        $user = Auth::user();
+        $user = Auth::user()->load(['tenant', 'roles', 'enrollments.course', 'certificates']);
         return Inertia::render('Profile/Show', compact('user'));
     }
 

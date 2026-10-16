@@ -52,4 +52,45 @@ class DiscussionReplyController extends Controller
         return redirect()->route('discussions.show', $discussionId)
             ->with('success', 'Reply deleted.');
     }
+
+    public function toggleSolution(Request $request, Discussion $discussion, DiscussionReply $reply)
+    {
+        abort_unless($reply->discussion_id === $discussion->id, 404);
+        $this->authorize('verifySolution', $discussion);
+
+        if ($reply->is_solution) {
+            $reply->update([
+                'is_solution' => false,
+                'verified_at' => null,
+                'verified_by' => null,
+            ]);
+
+            $discussion->update([
+                'is_resolved' => false,
+                'accepted_reply_id' => null,
+            ]);
+
+            return redirect()->back()->with('success', 'Status solusi terverifikasi dibatalkan.');
+        }
+
+        // Unmark previous solutions
+        $discussion->replies()->where('is_solution', true)->update([
+            'is_solution' => false,
+            'verified_at' => null,
+            'verified_by' => null,
+        ]);
+
+        $reply->update([
+            'is_solution' => true,
+            'verified_at' => now(),
+            'verified_by' => auth()->id(),
+        ]);
+
+        $discussion->update([
+            'is_resolved' => true,
+            'accepted_reply_id' => $reply->id,
+        ]);
+
+        return redirect()->back()->with('success', 'Jawaban berhasil ditandai sebagai solusi terverifikasi!');
+    }
 }

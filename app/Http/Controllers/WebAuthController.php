@@ -30,10 +30,33 @@ class WebAuthController extends Controller
         ]);
 
         if (Auth::attempt($credentials, $request->boolean('remember'))) {
+            $user = Auth::user();
+
+            // Check if tenant is pending or rejected
+            if ($user->tenant_id && $user->tenant) {
+                if ($user->tenant->status === 'pending') {
+                    Auth::logout();
+                    $request->session()->invalidate();
+                    $request->session()->regenerateToken();
+                    return back()->withErrors([
+                        'email' => 'Pendaftaran institusi Anda sedang menunggu persetujuan dari Super Admin.',
+                    ])->onlyInput('email');
+                }
+
+                if ($user->tenant->status === 'rejected') {
+                    Auth::logout();
+                    $request->session()->invalidate();
+                    $request->session()->regenerateToken();
+                    return back()->withErrors([
+                        'email' => 'Pendaftaran institusi Anda telah ditolak oleh Super Admin. Silakan hubungi Admin/CS.',
+                    ])->onlyInput('email');
+                }
+            }
+
             $request->session()->regenerate();
 
             // Redirect superadmin to admin dashboard
-            if (Auth::user()->hasRole('superadmin')) {
+            if ($user->hasRole('superadmin')) {
                 return redirect()->intended(route('admin.dashboard'))->with('success', 'Welcome back, Admin!');
             }
 
@@ -50,7 +73,7 @@ class WebAuthController extends Controller
      */
     public function showRegisterForm()
     {
-        return view('auth.register');
+        return inertia('Auth/Register');
     }
 
     /**
@@ -64,10 +87,15 @@ class WebAuthController extends Controller
             'password' => ['required', 'confirmed', Password::defaults()],
         ]);
 
+        // Default tenant for public learners is tenant-a (Universitas Teknologi)
+        $defaultTenantId = \App\Models\Tenant::where('status', 'active')->first()?->id ?? 'tenant-a';
+
         $user = User::create([
             'name' => $validated['name'],
             'email' => $validated['email'],
             'password' => Hash::make($validated['password']),
+            'tenant_id' => $defaultTenantId,
+            'email_verified_at' => now(),
         ]);
 
         // Assign student role
@@ -77,7 +105,7 @@ class WebAuthController extends Controller
 
         Auth::login($user);
 
-        return redirect(route('dashboard'))->with('success', 'Account created successfully!');
+        return redirect(route('dashboard'))->with('success', 'Akun berhasil dibuat! Selamat datang di KITsuluh.');
     }
 
     /**

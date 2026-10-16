@@ -1,5 +1,8 @@
 <script setup>
 import { useSkins } from '@core/composable/useSkins'
+import { initConfigStore } from '@core/stores/config'
+
+initConfigStore()
 
 const { injectSkinClasses } = useSkins()
 

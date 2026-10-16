@@ -51,6 +51,22 @@ class AcademyCourseDetailResource extends JsonResource
             'instructorPosition' => $this->instructor?->department ?? 'Instructor',
             // Content curriculum
             'content' => $this->buildCurriculum(),
+            // Reviews
+            'reviews' => $this->relationLoaded('reviews')
+                ? $this->reviews->sortByDesc('created_at')->map(function ($rev) {
+                    return [
+                        'id' => $rev->id,
+                        'rating' => $rev->rating,
+                        'review' => $rev->review,
+                        'createdAt' => $rev->created_at?->toISOString(),
+                        'user' => [
+                            'id' => $rev->user?->id,
+                            'name' => $rev->user?->name ?? 'Anonymous',
+                            'avatar' => $rev->user?->avatar_url ?? null,
+                        ],
+                    ];
+                })->values()->toArray()
+                : [],
             // Status flags
             'published' => (bool) $this->published,
             'createdAt' => $this->created_at,

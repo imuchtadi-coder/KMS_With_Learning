@@ -24,3 +24,6 @@
 Homestead.json
 Homestead.yaml
 Thumbs.db
+temp_chrome*
+rendered_dom.html
+chrome_error.log
