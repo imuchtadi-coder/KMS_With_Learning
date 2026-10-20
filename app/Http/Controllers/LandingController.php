@@ -25,6 +25,8 @@ class LandingController extends Controller
 
         $cs = WhatsappCustomerService::where('is_active', true)->first();
         $plans = \App\Models\SubscriptionPlan::where('is_active', true)->orderBy('sort_order')->get();
+        $branding = \App\Models\TenantBranding::whereNotNull('agency_name')->first() ?? \App\Models\TenantBranding::first();
+        $appName = $branding?->agency_name ?: 'KMS Learning';
 
         return Inertia::render('Landing/Index', [
             'stats' => $stats,
@@ -33,6 +35,13 @@ class LandingController extends Controller
                 'name' => $cs->name,
                 'phone_number' => $cs->phone_number,
             ] : null,
+            'branding' => [
+                'agency_name' => $appName,
+                'tagline' => $branding?->tagline ?: 'Belajar asik dengan Digital',
+                'logo_url' => ($branding && $branding->logo_path)
+                    ? \Illuminate\Support\Facades\Storage::disk('public')->url($branding->logo_path)
+                    : null,
+            ],
         ]);
     }
 }

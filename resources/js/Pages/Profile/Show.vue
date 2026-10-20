@@ -1,14 +1,36 @@
 <script setup>
-import { computed } from 'vue'
-import { Link, usePage } from '@inertiajs/vue3'
+import { ref, computed } from 'vue'
+import { Link, usePage, useForm, router } from '@inertiajs/vue3'
 
 const props = defineProps({
   user: { type: Object, required: true },
+  skillCatalog: { type: Array, default: () => [] },
 })
 
 const page = usePage()
 const flash = computed(() => page.props.flash || {})
 const initials = computed(() => props.user.name?.charAt(0).toUpperCase() || 'U')
+
+const isAddSkillModalOpen = ref(false)
+const addSkillForm = useForm({
+  skill_id: null,
+  proficiency_level: 'intermediate',
+})
+
+const submitAddSkill = () => {
+  addSkillForm.post(route('experts.skills.add'), {
+    onSuccess: () => {
+      isAddSkillModalOpen.value = false
+      addSkillForm.reset()
+    },
+  })
+}
+
+const deleteSkill = (userSkillId) => {
+  if (confirm('Hapus keahlian ini dari profil Anda?')) {
+    router.delete(route('experts.skills.destroy', userSkillId))
+  }
+}
 
 const memberSince = computed(() => {
   if (!props.user.created_at) return '-'
@@ -256,9 +278,75 @@ const formatRoleName = (name) => {
         </VCard>
       </VCol>
 
-      <!-- Right Column: Organization & Security Overview -->
+      <!-- Right Column: Organization, Skills & Security Overview -->
       <VCol cols="12" md="5">
         <div class="d-flex flex-column ga-5">
+          <!-- SME Skills & Expertise Card -->
+          <VCard flat border class="pa-5 rounded-lg">
+            <div class="d-flex align-center justify-space-between mb-3">
+              <div class="d-flex align-center ga-2">
+                <VIcon icon="mdi-account-star-outline" color="primary" size="22" />
+                <h6 class="text-subtitle-1 font-weight-bold mb-0">Keahlian & Kepakaran (SME)</h6>
+              </div>
+              <VBtn
+                color="primary"
+                variant="tonal"
+                size="x-small"
+                rounded="lg"
+                prepend-icon="mdi-plus"
+                @click="isAddSkillModalOpen = true"
+              >
+                Tambah
+              </VBtn>
+            </div>
+
+            <p class="text-caption text-medium-emphasis mb-3">
+              Daftar keahlian profesional yang Anda kuasai dan diakui oleh rekan kerja melalui endorsement.
+            </p>
+
+            <div v-if="user.user_skills && user.user_skills.length > 0" class="d-flex flex-column ga-2 mb-3">
+              <div
+                v-for="us in user.user_skills"
+                :key="us.id"
+                class="pa-2 px-3 rounded border bg-surface d-flex align-center justify-space-between flex-wrap ga-2"
+              >
+                <div>
+                  <div class="d-flex align-center ga-1">
+                    <span class="text-caption font-weight-bold">{{ us.skill?.name }}</span>
+                    <VIcon v-if="us.is_verified" icon="mdi-check-decagram" size="14" color="warning" title="SME Resmi Terverifikasi" />
+                  </div>
+                  <div class="d-flex align-center ga-2 mt-1">
+                    <VChip size="x-small" color="primary" variant="tonal" class="text-uppercase" style="font-size: 0.65rem;">
+                      {{ us.proficiency_level }}
+                    </VChip>
+                    <span class="text-caption text-medium-emphasis" style="font-size: 0.72rem;">
+                      👍 {{ us.endorsements_count || 0 }} Endorsement
+                    </span>
+                  </div>
+                </div>
+
+                <VBtn
+                  icon="mdi-close"
+                  variant="text"
+                  size="x-small"
+                  color="secondary"
+                  title="Hapus keahlian"
+                  @click="deleteSkill(us.id)"
+                />
+              </div>
+            </div>
+
+            <div v-else class="text-center pa-4 border border-dashed rounded text-medium-emphasis mb-3 text-caption">
+              Belum ada keahlian yang didaftarkan.
+            </div>
+
+            <Link :href="route('experts.index')" class="text-decoration-none d-block">
+              <VBtn variant="text" color="primary" size="x-small" block append-icon="mdi-arrow-right">
+                Buka Direktori Pakar Organisasi
+              </VBtn>
+            </Link>
+          </VCard>
+
           <!-- Organization / Tenant Card -->
           <VCard flat border class="pa-5 rounded-lg">
             <div class="d-flex align-center ga-2 mb-3">
@@ -269,7 +357,7 @@ const formatRoleName = (name) => {
             <div class="pa-3 rounded border bg-surface mb-3">
               <span class="text-caption text-medium-emphasis d-block">Nama Lembaga (Tenant)</span>
               <span class="text-body-2 font-weight-bold text-primary">
-                {{ user.tenant?.name || 'KITsuluh Default Organisasi' }}
+                {{ user.tenant?.name || 'KMS Learning' }}
               </span>
               <span v-if="user.tenant?.address" class="text-caption text-medium-emphasis d-block mt-1">
                 {{ user.tenant.address }}
@@ -318,6 +406,65 @@ const formatRoleName = (name) => {
         </div>
       </VCol>
     </VRow>
+
+    <!-- Modal Dialog Tambah Keahlian -->
+    <VDialog v-model="isAddSkillModalOpen" max-width="500px">
+      <VCard rounded="xl" class="pa-2">
+        <VCardTitle class="pa-4 d-flex align-center justify-space-between">
+          <span class="text-h6 font-weight-bold">Tambah Keahlian Profesional</span>
+          <VBtn icon="mdi-close" variant="text" density="compact" @click="isAddSkillModalOpen = false" />
+        </VCardTitle>
+
+        <VCardText class="pa-4 pt-0">
+          <form @submit.prevent="submitAddSkill">
+            <VSelect
+              v-model="addSkillForm.skill_id"
+              :items="skillCatalog"
+              item-title="name"
+              item-value="id"
+              label="Keahlian dari Taksonomi *"
+              placeholder="Pilih bidang keahlian Anda..."
+              variant="outlined"
+              density="compact"
+              rounded="lg"
+              class="mb-3"
+              :error-messages="addSkillForm.errors.skill_id"
+              required
+            />
+
+            <VSelect
+              v-model="addSkillForm.proficiency_level"
+              :items="[
+                { title: 'Beginner (Pemula / Memahami Dasar)', value: 'beginner' },
+                { title: 'Intermediate (Praktisi Berpengalaman)', value: 'intermediate' },
+                { title: 'Advanced (Mahir / Mampu Mengarahkan)', value: 'advanced' },
+                { title: 'Expert (Pakar / Problem Solver Utama)', value: 'expert' },
+              ]"
+              label="Tingkat Kemahiran (Proficiency) *"
+              variant="outlined"
+              density="compact"
+              rounded="lg"
+              class="mb-3"
+            />
+          </form>
+        </VCardText>
+
+        <VCardActions class="pa-4 pt-0 d-flex justify-end ga-2">
+          <VBtn variant="text" rounded="lg" @click="isAddSkillModalOpen = false">
+            Batal
+          </VBtn>
+          <VBtn
+            color="primary"
+            variant="elevated"
+            rounded="lg"
+            :loading="addSkillForm.processing"
+            @click="submitAddSkill"
+          >
+            Simpan Keahlian
+          </VBtn>
+        </VCardActions>
+      </VCard>
+    </VDialog>
   </div>
 </template>
 

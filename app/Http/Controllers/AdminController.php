@@ -6,6 +6,7 @@ use App\Models\Course;
 use App\Models\Tenant;
 use App\Models\User;
 use App\Models\TenantBranding;
+use App\Models\WhatsappCustomerService;
 use App\Listeners\ConfigureTenantMail;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -673,186 +674,200 @@ class AdminController extends Controller
     }
 
     /**
-     * Branding tenant
+     * Branding tenant & Kontak Layanan Pelanggan WhatsApp
      */
     public function branding()
     {
-        $tenant = auth()->user()->tenant;
+        $user = auth()->user();
+        $isSuperAdmin = $user->hasRole('superadmin');
+        $tenant = $user->tenant;
 
-        abort_unless($tenant, 403);
+        abort_unless($tenant || $isSuperAdmin, 403);
 
-        $branding = $tenant->branding;
+        $cs = WhatsappCustomerService::firstOrCreate(
+            ['id' => 1],
+            [
+                'name' => 'Customer Service KIT',
+                'phone_number' => '6281110555605',
+                'is_active' => true,
+            ]
+        );
+
+        if ($tenant) {
+            $branding = $tenant->branding;
+        } else {
+            $branding = TenantBranding::whereNotNull('agency_name')->first() ?? TenantBranding::first();
+        }
 
         return Inertia::render('Admin/Branding/Index', [
+            'is_superadmin' => $isSuperAdmin,
             'tenant' => [
-                'id' => $tenant->id,
-                'name' => $tenant->name,
+                'id' => $tenant?->id ?? ($branding?->tenant_id ?? 'system'),
+                'name' => $tenant?->name ?? 'Platform Pusat (Super Admin)',
             ],
-
             'branding' => [
-                'agency_name' => $branding?->agency_name ?? '',
+                'agency_name' => $branding?->agency_name ?: 'KMS Learning',
                 'tagline' => $branding?->tagline ?? '',
-
                 'logo_path' => $branding?->logo_path,
-
-                'certificate_logo_path' =>
-                    $branding?->certificate_logo_path,
-
+                'certificate_logo_path' => $branding?->certificate_logo_path,
                 'logo_url' => $branding?->logo_path
-                    ? Storage::disk('public')->url(
-                        $branding->logo_path
-                    )
+                    ? Storage::disk('public')->url($branding->logo_path)
                     : null,
-
-                'certificate_logo_url' =>
-                    $branding?->certificate_logo_path
-                        ? Storage::disk('public')->url(
-                            $branding->certificate_logo_path
-                        )
-                        : null,
+                'certificate_logo_url' => $branding?->certificate_logo_path
+                    ? Storage::disk('public')->url($branding->certificate_logo_path)
+                    : null,
+            ],
+            'whatsapp' => [
+                'name' => $cs->name ?? 'Customer Service',
+                'phone_number' => $cs->phone_number ?? '',
+                'is_active' => (bool) ($cs->is_active ?? true),
             ],
         ]);
     }
 
     /**
- * Update tenant branding
- */
+     * Update tenant branding & Kontak Layanan Pelanggan WhatsApp
+     */
     public function updateBranding(Request $request)
     {
-        $tenant = auth()->user()->tenant;
+        $user = auth()->user();
+        $isSuperAdmin = $user->hasRole('superadmin');
+        $tenant = $user->tenant;
 
-        abort_unless($tenant, 403);
+        abort_unless($tenant || $isSuperAdmin, 403);
 
         $validated = $request->validate([
             'agency_name' => ['nullable', 'string', 'max:255'],
             'tagline' => ['nullable', 'string', 'max:500'],
-
             'logo' => [
                 'nullable',
                 'file',
                 'mimes:jpg,jpeg,png,webp',
                 'max:5120',
             ],
-
             'certificate_logo' => [
                 'nullable',
                 'file',
                 'mimes:jpg,jpeg,png,webp',
                 'max:5120',
             ],
+            'whatsapp_name' => ['nullable', 'string', 'max:100'],
+            'whatsapp_phone_number' => ['nullable', 'string', 'max:30'],
+            'whatsapp_is_active' => ['nullable', 'boolean'],
         ]);
 
-        /*
-        * Ambil atau buat branding tenant.
-        */
-        $branding = $tenant->branding;
+        // Simpan / update nomor WhatsApp Layanan Pelanggan (CS)
+        if ($request->has('whatsapp_phone_number')) {
+            $rawPhone = (string) $request->input('whatsapp_phone_number', '');
+            $cleanPhone = preg_replace('/[^0-9]/', '', $rawPhone);
+            if (str_starts_with($cleanPhone, '0')) {
+                $cleanPhone = '62' . substr($cleanPhone, 1);
+            }
 
-        if (!$branding) {
-            $branding = TenantBranding::create([
-                'tenant_id' => $tenant->id,
-                'agency_name' => $validated['agency_name'] ?? null,
-                'tagline' => $validated['tagline'] ?? null,
-            ]);
-        } else {
-            $branding->update([
-                'agency_name' => $validated['agency_name'] ?? null,
-                'tagline' => $validated['tagline'] ?? null,
-            ]);
+            WhatsappCustomerService::updateOrCreate(
+                ['id' => 1],
+                [
+                    'name' => $request->input('whatsapp_name') ?: 'Customer Service',
+                    'phone_number' => $cleanPhone ?: $rawPhone,
+                    'is_active' => $request->boolean('whatsapp_is_active', true),
+                ]
+            );
         }
 
-        /*
-        * Process main logo.
-        *
-        * PNG  -> PNG
-        * WebP -> WebP
-        * JPG  -> PNG
-        */
-        if ($request->hasFile('logo')) {
-            $oldLogoPath = $branding->logo_path;
+        $branding = null;
+        $targetTenantId = 'system';
 
-            $newLogoPath = $this->processBrandingImage(
-                $request->file('logo'),
-                $tenant->id,
-                'logo'
-            );
-
-            $branding->update([
-                'logo_path' => $newLogoPath,
-            ]);
-
-            /*
-            * Hapus file lama hanya setelah file baru
-            * berhasil diproses dan disimpan.
-            */
-            if (
-                $oldLogoPath &&
-                $oldLogoPath !== $newLogoPath &&
-                Storage::disk('public')->exists($oldLogoPath)
-            ) {
-                Storage::disk('public')->delete($oldLogoPath);
+        if ($tenant) {
+            $branding = $tenant->branding;
+            $targetTenantId = $tenant->id;
+            if (!$branding) {
+                $branding = TenantBranding::create([
+                    'tenant_id' => $targetTenantId,
+                    'agency_name' => $validated['agency_name'] ?? 'KMS Learning',
+                    'tagline' => $validated['tagline'] ?? null,
+                ]);
+            } else {
+                $branding->update([
+                    'agency_name' => $validated['agency_name'] ?? 'KMS Learning',
+                    'tagline' => $validated['tagline'] ?? null,
+                ]);
             }
-        } elseif ($request->boolean('remove_logo')) {
-            $oldLogoPath = $branding->logo_path;
-
-            $branding->update([
-                'logo_path' => null,
-            ]);
-
-            if (
-                $oldLogoPath &&
-                Storage::disk('public')->exists($oldLogoPath)
-            ) {
-                Storage::disk('public')->delete($oldLogoPath);
+        } elseif ($isSuperAdmin) {
+            $branding = TenantBranding::whereNotNull('agency_name')->first() ?? TenantBranding::first();
+            $targetTenantId = $branding?->tenant_id ?? (Tenant::first()?->id ?? 'tenant-a');
+            if (!$branding) {
+                $branding = TenantBranding::create([
+                    'tenant_id' => $targetTenantId,
+                    'agency_name' => $validated['agency_name'] ?? 'KMS Learning',
+                    'tagline' => $validated['tagline'] ?? null,
+                ]);
+            } else {
+                $branding->update([
+                    'agency_name' => $validated['agency_name'] ?? 'KMS Learning',
+                    'tagline' => $validated['tagline'] ?? null,
+                ]);
             }
         }
 
-        /*
-        * Process certificate logo.
-        *
-        * PNG  -> PNG
-        * WebP -> WebP
-        * JPG  -> PNG
-        */
-        if ($request->hasFile('certificate_logo')) {
-            $oldCertificateLogoPath = $branding->certificate_logo_path;
-
-            $newCertificateLogoPath = $this->processBrandingImage(
-                $request->file('certificate_logo'),
-                $tenant->id,
-                'certificate-logo'
-            );
-
-            $branding->update([
-                'certificate_logo_path' => $newCertificateLogoPath,
-            ]);
-
-            /*
-            * Hapus file lama hanya setelah file baru
-            * berhasil diproses dan disimpan.
-            */
-            if (
-                $oldCertificateLogoPath &&
-                $oldCertificateLogoPath !== $newCertificateLogoPath &&
-                Storage::disk('public')->exists($oldCertificateLogoPath)
-            ) {
-                Storage::disk('public')->delete(
-                    $oldCertificateLogoPath
+        if ($branding) {
+            if ($request->hasFile('logo')) {
+                $oldLogoPath = $branding->logo_path;
+                $newLogoPath = $this->processBrandingImage(
+                    $request->file('logo'),
+                    $targetTenantId,
+                    'logo'
                 );
+                $branding->update([
+                    'logo_path' => $newLogoPath,
+                ]);
+                if (
+                    $oldLogoPath &&
+                    $oldLogoPath !== $newLogoPath &&
+                    Storage::disk('public')->exists($oldLogoPath)
+                ) {
+                    Storage::disk('public')->delete($oldLogoPath);
+                }
+            } elseif ($request->boolean('remove_logo')) {
+                $oldLogoPath = $branding->logo_path;
+                $branding->update([
+                    'logo_path' => null,
+                ]);
+                if (
+                    $oldLogoPath &&
+                    Storage::disk('public')->exists($oldLogoPath)
+                ) {
+                    Storage::disk('public')->delete($oldLogoPath);
+                }
             }
-        } elseif ($request->boolean('remove_certificate_logo')) {
-            $oldCertificateLogoPath = $branding->certificate_logo_path;
 
-            $branding->update([
-                'certificate_logo_path' => null,
-            ]);
-
-            if (
-                $oldCertificateLogoPath &&
-                Storage::disk('public')->exists($oldCertificateLogoPath)
-            ) {
-                Storage::disk('public')->delete(
-                    $oldCertificateLogoPath
+            if ($request->hasFile('certificate_logo')) {
+                $oldCertificateLogoPath = $branding->certificate_logo_path;
+                $newCertificateLogoPath = $this->processBrandingImage(
+                    $request->file('certificate_logo'),
+                    $targetTenantId,
+                    'certificate-logo'
                 );
+                $branding->update([
+                    'certificate_logo_path' => $newCertificateLogoPath,
+                ]);
+                if (
+                    $oldCertificateLogoPath &&
+                    $oldCertificateLogoPath !== $newCertificateLogoPath &&
+                    Storage::disk('public')->exists($oldCertificateLogoPath)
+                ) {
+                    Storage::disk('public')->delete($oldCertificateLogoPath);
+                }
+            } elseif ($request->boolean('remove_certificate_logo')) {
+                $oldCertificateLogoPath = $branding->certificate_logo_path;
+                $branding->update([
+                    'certificate_logo_path' => null,
+                ]);
+                if (
+                    $oldCertificateLogoPath &&
+                    Storage::disk('public')->exists($oldCertificateLogoPath)
+                ) {
+                    Storage::disk('public')->delete($oldCertificateLogoPath);
+                }
             }
         }
 
@@ -860,7 +875,7 @@ class AdminController extends Controller
             ->route('admin.branding')
             ->with(
                 'success',
-                'Branding berhasil diperbarui.'
+                'Pengaturan branding dan kontak Layanan Pelanggan WhatsApp berhasil diperbarui.'
             );
     }
 

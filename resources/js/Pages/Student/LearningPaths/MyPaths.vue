@@ -231,56 +231,56 @@ const filteredEnrollments = computed(() => {
         <VCard
           flat
           border
-          class="h-100 d-flex flex-column rounded-xl path-card transition-swing"
+          class="h-100 d-flex flex-column rounded-lg path-card transition-swing"
         >
           <!-- Top Card Meta Header -->
-          <div class="pa-5 pb-3">
-            <div class="d-flex justify-space-between align-center mb-3">
+          <div class="pa-4 pb-2">
+            <div class="d-flex justify-space-between align-center mb-2">
               <VChip
-                size="small"
+                size="x-small"
                 variant="tonal"
                 color="primary"
                 label
-                class="font-weight-medium"
+                class="font-weight-semibold"
               >
-                <VIcon start icon="mdi-book-multiple-outline" size="14" />
+                <VIcon start icon="mdi-book-multiple-outline" size="12" />
                 {{ enrollment.learning_path?.courses?.length || 0 }} Kursus
               </VChip>
 
               <VChip
                 v-if="enrollment.completed_at || getProgress(enrollment) === 100"
-                size="small"
+                size="x-small"
                 color="success"
                 variant="flat"
                 label
                 class="font-weight-bold"
               >
-                <VIcon start icon="mdi-check-circle" size="14" />
+                <VIcon start icon="mdi-check-circle" size="12" />
                 Tuntas
               </VChip>
               <VChip
                 v-else
-                size="small"
+                size="x-small"
                 color="warning"
                 variant="tonal"
                 label
                 class="font-weight-bold"
               >
-                <VIcon start icon="mdi-progress-clock" size="14" />
+                <VIcon start icon="mdi-progress-clock" size="12" />
                 Sedang Berjalan
               </VChip>
             </div>
 
             <!-- Path Title -->
             <h5
-              class="text-h6 font-weight-bold text-high-emphasis mb-2 line-clamp-2"
+              class="text-subtitle-1 font-weight-bold text-high-emphasis mb-1 line-clamp-1"
               :title="enrollment.learning_path?.title"
             >
               {{ enrollment.learning_path?.title }}
             </h5>
 
             <!-- Path Description -->
-            <p class="text-body-2 text-medium-emphasis mb-3 line-clamp-2" style="min-height: 40px;">
+            <p class="text-caption text-medium-emphasis mb-1 line-clamp-2" style="line-height: 1.4;">
               {{ enrollment.learning_path?.description || 'Pelajari rangkaian kurikulum bertahap ini untuk menuntaskan keahlian Anda.' }}
             </p>
           </div>
@@ -288,80 +288,84 @@ const filteredEnrollments = computed(() => {
           <VDivider />
 
           <!-- Progress Overview Section -->
-          <VCardText class="pa-5 flex-grow-1">
-            <div class="mb-4">
-              <div class="d-flex justify-space-between align-center mb-1">
-                <span class="text-caption text-medium-emphasis font-weight-medium">Kemajuan Belajar</span>
-                <span class="text-caption font-weight-bold text-primary">{{ getProgress(enrollment) }}%</span>
+          <VCardText class="pa-4 pt-3 flex-grow-1 d-flex flex-column justify-space-between">
+            <div>
+              <div class="mb-3">
+                <div class="d-flex justify-space-between align-center mb-1">
+                  <span class="text-caption text-medium-emphasis font-weight-medium" style="font-size: 0.75rem !important;">Kemajuan Belajar</span>
+                  <span class="text-caption font-weight-bold text-primary" style="font-size: 0.75rem !important;">{{ getProgress(enrollment) }}%</span>
+                </div>
+                <VProgressLinear
+                  :model-value="getProgress(enrollment)"
+                  :color="getProgress(enrollment) === 100 ? 'success' : 'primary'"
+                  height="5"
+                  rounded
+                  bg-opacity="0.15"
+                />
               </div>
-              <VProgressLinear
-                :model-value="getProgress(enrollment)"
-                :color="getProgress(enrollment) === 100 ? 'success' : 'primary'"
-                height="8"
-                rounded
-                bg-opacity="0.15"
-              />
-            </div>
 
-            <!-- Completion Date or Started Date -->
-            <div
-              v-if="enrollment.completed_at || getProgress(enrollment) === 100"
-              class="d-flex align-center ga-2 pa-2 rounded-lg bg-success-light border border-success-subtle mb-4"
-            >
-              <VIcon icon="mdi-trophy-variant" color="success" size="18" />
-              <div class="text-caption text-success font-weight-medium">
-                Tuntas diselesaikan pada {{ formatDate(enrollment.completed_at) }}
-              </div>
-            </div>
-            <div
-              v-else
-              class="d-flex align-center ga-2 pa-2 rounded-lg bg-background border mb-4"
-            >
-              <VIcon icon="mdi-calendar-start" color="medium-emphasis" size="18" />
-              <div class="text-caption text-medium-emphasis">
-                Dimulai sejak {{ formatDate(enrollment.started_at) }}
-              </div>
-            </div>
-
-            <!-- Syllabus Roadmap Snapshot -->
-            <div class="d-flex align-center justify-space-between mb-2">
-              <span class="text-caption font-weight-bold text-uppercase text-medium-emphasis">
-                Capaian Kursus
-              </span>
-              <span class="text-caption font-weight-bold text-high-emphasis">
-                {{ enrollment.completed_count || 0 }} / {{ enrollment.learning_path?.courses?.length || 0 }} Kursus
-              </span>
-            </div>
-
-            <div class="d-flex flex-column ga-2">
+              <!-- Completion Date or Started Date -->
               <div
-                v-for="(course, idx) in (enrollment.learning_path?.courses || []).slice(0, 3)"
-                :key="course.id"
-                class="d-flex align-center ga-2 pa-2 rounded-lg bg-background border"
+                v-if="enrollment.completed_at || getProgress(enrollment) === 100"
+                class="d-flex align-center ga-2 pa-1-5 px-2 rounded bg-success-light border border-success-subtle mb-3"
               >
-                <VAvatar
-                  size="22"
-                  :color="idx < (enrollment.completed_count || 0) ? 'success' : 'primary'"
-                  variant="tonal"
-                  class="text-caption font-weight-bold"
-                >
-                  <VIcon
-                    v-if="idx < (enrollment.completed_count || 0)"
-                    icon="mdi-check"
-                    size="14"
-                  />
-                  <span v-else>{{ idx + 1 }}</span>
-                </VAvatar>
-                <span class="text-body-2 text-truncate flex-grow-1">
-                  {{ course.title }}
+                <VIcon icon="mdi-trophy-variant" color="success" size="16" />
+                <div class="text-caption text-success font-weight-medium" style="font-size: 0.72rem !important;">
+                  Tuntas pada {{ formatDate(enrollment.completed_at) }}
+                </div>
+              </div>
+              <div
+                v-else
+                class="d-flex align-center ga-2 pa-1-5 px-2 rounded bg-surface-variant-subtle border mb-3"
+              >
+                <VIcon icon="mdi-calendar-start" color="medium-emphasis" size="16" />
+                <div class="text-caption text-medium-emphasis" style="font-size: 0.72rem !important;">
+                  Dimulai sejak {{ formatDate(enrollment.started_at) }}
+                </div>
+              </div>
+
+              <!-- Syllabus Roadmap Snapshot -->
+              <div class="d-flex align-center justify-space-between mb-2">
+                <span class="text-caption font-weight-bold text-uppercase text-medium-emphasis" style="font-size: 0.72rem !important; letter-spacing: 0.5px;">
+                  Capaian Kursus
+                </span>
+                <span class="text-caption font-weight-bold text-high-emphasis" style="font-size: 0.72rem !important;">
+                  {{ enrollment.completed_count || 0 }} / {{ enrollment.learning_path?.courses?.length || 0 }} Kursus
                 </span>
               </div>
 
-              <div
-                v-if="(enrollment.learning_path?.courses || []).length > 3"
-                class="text-caption text-medium-emphasis text-center py-1 bg-background rounded border border-dashed"
-              >
-                + {{ enrollment.learning_path.courses.length - 3 }} kursus lainnya
+              <div class="d-flex flex-column ga-1-5 mb-2">
+                <div
+                  v-for="(course, idx) in (enrollment.learning_path?.courses || []).slice(0, 3)"
+                  :key="course.id"
+                  class="d-flex align-center ga-2 pa-1-5 px-2 rounded bg-surface-variant-subtle border"
+                >
+                  <VAvatar
+                    size="18"
+                    :color="idx < (enrollment.completed_count || 0) ? 'success' : 'primary'"
+                    variant="tonal"
+                    class="font-weight-bold text-caption"
+                    style="font-size: 0.65rem !important; min-width: 18px;"
+                  >
+                    <VIcon
+                      v-if="idx < (enrollment.completed_count || 0)"
+                      icon="mdi-check"
+                      size="12"
+                    />
+                    <span v-else>{{ idx + 1 }}</span>
+                  </VAvatar>
+                  <span class="text-caption font-weight-medium text-truncate flex-grow-1" style="font-size: 0.78rem !important;">
+                    {{ course.title }}
+                  </span>
+                </div>
+
+                <div
+                  v-if="(enrollment.learning_path?.courses || []).length > 3"
+                  class="text-caption text-medium-emphasis text-center py-1 bg-surface-variant-subtle rounded border border-dashed"
+                  style="font-size: 0.7rem !important;"
+                >
+                  + {{ enrollment.learning_path.courses.length - 3 }} kursus lainnya
+                </div>
               </div>
             </div>
           </VCardText>
@@ -369,29 +373,19 @@ const filteredEnrollments = computed(() => {
           <VDivider />
 
           <!-- Card Actions Footer -->
-          <VCardActions class="pa-4 bg-background">
-            <div class="d-flex ga-2 w-100">
-              <VBtn
-                color="primary"
-                variant="elevated"
-                class="flex-grow-1 font-weight-medium"
-                :href="route('student.learning-paths.show', enrollment.learning_path?.id)"
-              >
-                <VIcon start :icon="getProgress(enrollment) === 100 ? 'mdi-certificate-outline' : 'mdi-play-circle'" size="18" />
-                {{ getProgress(enrollment) === 100 ? 'Review & Sertifikat' : 'Lanjutkan Belajar' }}
-              </VBtn>
-
-              <VBtn
-                variant="tonal"
-                color="default"
-                icon
-                rounded="lg"
-                title="Buka Jalur Ini"
-                :href="route('student.learning-paths.show', enrollment.learning_path?.id)"
-              >
-                <VIcon icon="mdi-arrow-right" size="20" />
-              </VBtn>
-            </div>
+          <VCardActions class="pa-2-5 px-3 bg-surface-variant-subtle">
+            <VBtn
+              color="primary"
+              variant="elevated"
+              size="small"
+              block
+              class="font-weight-medium"
+              :prepend-icon="getProgress(enrollment) === 100 ? 'mdi-certificate-outline' : 'mdi-play-circle'"
+              append-icon="mdi-arrow-right"
+              :href="route('student.learning-paths.show', enrollment.learning_path?.id)"
+            >
+              {{ getProgress(enrollment) === 100 ? 'Review & Sertifikat' : 'Lanjutkan Belajar' }}
+            </VBtn>
           </VCardActions>
         </VCard>
       </VCol>
@@ -433,9 +427,20 @@ const filteredEnrollments = computed(() => {
   transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
 }
 .path-card:hover {
-  transform: translateY(-3px);
+  transform: translateY(-2px);
   border-color: rgba(var(--v-theme-primary), 0.4) !important;
-  box-shadow: 0 8px 24px -4px rgba(0, 0, 0, 0.08) !important;
+  box-shadow: 0 6px 18px -4px rgba(0, 0, 0, 0.08) !important;
+}
+
+.bg-surface-variant-subtle {
+  background-color: rgba(var(--v-theme-on-surface), 0.03);
+}
+
+.line-clamp-1 {
+  display: -webkit-box;
+  -webkit-line-clamp: 1;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
 .line-clamp-2 {

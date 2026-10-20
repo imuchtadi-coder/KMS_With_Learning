@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Models\TenantBranding;
 use App\Models\WhatsappCustomerService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -50,38 +51,23 @@ class HandleInertiaRequests extends Middleware
          * ============================================================
          * MASTER TENANT BRANDING
          * ============================================================
-         *
-         * Super Admin:
-         * - Tidak menggunakan tenant branding
-         * - Tetap menggunakan branding KITSuluh
-         *
-         * Tenant Admin / Instructor / Student:
-         * - Menggunakan branding tenant masing-masing
          */
-        $tenantBranding = null;
-
         $user = $request->user();
 
-        if (
-            $user &&
-            !$user->hasRole('superadmin') &&
-            $user->tenant
-        ) {
+        $branding = null;
+        if ($user && $user->tenant?->branding) {
             $branding = $user->tenant->branding;
-
-            if ($branding) {
-                $tenantBranding = [
-                    'agency_name' => $branding->agency_name,
-                    'tagline' => $branding->tagline,
-
-                    'logo_url' => $branding->logo_path
-                        ? Storage::disk('public')->url(
-                            $branding->logo_path
-                        )
-                        : null,
-                ];
-            }
+        } else {
+            $branding = TenantBranding::whereNotNull('agency_name')->first();
         }
+
+        $tenantBranding = [
+            'agency_name' => $branding?->agency_name ?: 'KMS Learning',
+            'tagline' => $branding?->tagline ?: 'Belajar asik dengan Digital',
+            'logo_url' => ($branding && $branding->logo_path)
+                ? Storage::disk('public')->url($branding->logo_path)
+                : null,
+        ];
 
         return [
             ...parent::share($request),

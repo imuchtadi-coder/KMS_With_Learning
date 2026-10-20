@@ -4,6 +4,7 @@ import { Link, router, usePage } from '@inertiajs/vue3'
 
 const props = defineProps({
   article: { type: Object, required: true },
+  spaceTree: { type: Array, default: () => [] },
   canEdit: { type: Boolean, default: false },
   canDelete: { type: Boolean, default: false },
   canReview: { type: Boolean, default: false },
@@ -100,10 +101,17 @@ const displayTitle = computed(() => props.viewingVersion ? props.viewingVersion.
 const displayExcerpt = computed(() => props.viewingVersion ? props.viewingVersion.excerpt : props.article.excerpt)
 const displayContent = computed(() => props.viewingVersion ? props.viewingVersion.content : props.article.content)
 const displayVersion = computed(() => props.viewingVersion ? props.viewingVersion.version : (props.article.version || '1.0'))
+
+const breadcrumbItems = computed(() => [
+  { title: 'Knowledge Base', href: route('articles.index') },
+  ...(props.article.space ? [{ title: props.article.space.name, href: route('spaces.show', props.article.space.id) }] : []),
+  ...(props.article.parent ? [{ title: props.article.parent.title, href: route('articles.show', props.article.parent.id) }] : []),
+  { title: displayTitle.value || props.article.title, disabled: true },
+])
 </script>
 
 <template>
-  <div class="article-show-page">
+  <div class="article-show-page" :key="article.id">
     <!-- Historical Version Notice Banner -->
     <VAlert
       v-if="viewingVersion"
@@ -131,25 +139,51 @@ const displayVersion = computed(() => props.viewingVersion ? props.viewingVersio
           >
             Pulihkan Versi Ini
           </VBtn>
-          <VBtn
-            variant="tonal"
-            color="white"
-            size="small"
-            :href="route('articles.show', article.id)"
-          >
-            Kembali ke Versi Terkini
-          </VBtn>
+          <Link :href="route('articles.show', article.id)" class="text-decoration-none">
+            <VBtn
+              variant="tonal"
+              color="white"
+              size="small"
+            >
+              Kembali ke Versi Terkini
+            </VBtn>
+          </Link>
         </div>
       </div>
     </VAlert>
 
+    <!-- Space Hierarchy Breadcrumbs -->
+    <VBreadcrumbs
+      :items="breadcrumbItems"
+      density="compact"
+      class="pa-0 mb-3 text-caption"
+    >
+      <template #item="{ item }">
+        <Link
+          v-if="item.href && !item.disabled"
+          :href="item.href"
+          class="text-decoration-none text-medium-emphasis hover-primary"
+        >
+          {{ item.title }}
+        </Link>
+        <span
+          v-else
+          :class="item.disabled ? 'text-high-emphasis font-weight-medium' : 'text-medium-emphasis'"
+        >
+          {{ item.title }}
+        </span>
+      </template>
+    </VBreadcrumbs>
+
     <!-- Top Action Bar -->
     <div class="d-flex align-center justify-space-between mb-6 flex-wrap ga-3">
-      <Link :href="route('articles.index')" class="text-decoration-none">
-        <VBtn variant="tonal" prepend-icon="mdi-arrow-left">
-          Kembali ke Knowledge Base
-        </VBtn>
-      </Link>
+      <div class="d-flex align-center ga-2 flex-wrap">
+        <Link :href="article.space ? route('spaces.show', article.space.id) : route('articles.index')" class="text-decoration-none">
+          <VBtn variant="tonal" prepend-icon="mdi-arrow-left">
+            {{ article.space ? `Kembali ke ${article.space.name}` : 'Kembali ke Knowledge Base' }}
+          </VBtn>
+        </Link>
+      </div>
 
       <div class="d-flex align-center ga-2 flex-wrap">
         <VBtn
@@ -163,15 +197,15 @@ const displayVersion = computed(() => props.viewingVersion ? props.viewingVersio
           Ajukan ke SME
         </VBtn>
 
-        <VBtn
-          v-if="canEdit"
-          color="primary"
-          variant="tonal"
-          prepend-icon="mdi-pencil"
-          :href="route('articles.edit', article.id)"
-        >
-          Revisi Versi Baru
-        </VBtn>
+        <Link v-if="canEdit" :href="route('articles.edit', article.id)" class="text-decoration-none">
+          <VBtn
+            color="primary"
+            variant="tonal"
+            prepend-icon="mdi-pencil"
+          >
+            Revisi Versi Baru
+          </VBtn>
+        </Link>
 
         <VBtn
           v-if="canDelete"
@@ -261,15 +295,16 @@ const displayVersion = computed(() => props.viewingVersion ? props.viewingVersio
           "{{ article.review_notes || 'Silakan perbaiki isi dokumen sesuai standar operasional.' }}"
         </div>
         <div v-if="canEdit" class="d-flex ga-2">
-          <VBtn
-            color="primary"
-            variant="elevated"
-            size="small"
-            prepend-icon="mdi-pencil"
-            :href="route('articles.edit', article.id)"
-          >
-            Lakukan Revisi Sekarang
-          </VBtn>
+          <Link :href="route('articles.edit', article.id)" class="text-decoration-none">
+            <VBtn
+              color="primary"
+              variant="elevated"
+              size="small"
+              prepend-icon="mdi-pencil"
+            >
+              Lakukan Revisi Sekarang
+            </VBtn>
+          </Link>
           <VBtn
             v-if="canSubmitReview"
             color="warning"
@@ -490,8 +525,80 @@ const displayVersion = computed(() => props.viewingVersion ? props.viewingVersio
         </VCard>
       </VCol>
 
-      <!-- Sidebar Column (Version History & Info) -->
+      <!-- Sidebar Column (Space Tree, Version History & Governance) -->
       <VCol cols="12" lg="4">
+        <!-- Space Navigation Tree Card (Confluence / Notion Style) -->
+        <VCard v-if="spaceTree && spaceTree.length > 0" flat border class="pa-4 mb-5">
+          <div class="d-flex align-center justify-space-between mb-3 pb-2 border-b">
+            <div class="d-flex align-center ga-2">
+              <VIcon :icon="article.space?.icon || 'mdi-folder-multiple-outline'" color="primary" size="20" />
+              <h6 class="text-subtitle-2 font-weight-bold mb-0 text-truncate" style="max-width: 220px;">
+                {{ article.space?.name || 'Hierarki Dokumen' }}
+              </h6>
+            </div>
+            <Link
+              v-if="article.space"
+              :href="route('spaces.show', article.space.id)"
+              class="text-caption text-primary text-decoration-none"
+            >
+              Lihat Space
+            </Link>
+          </div>
+
+          <div class="space-tree-list d-flex flex-column ga-1 text-caption">
+            <div v-for="node in spaceTree" :key="node.id" class="space-tree-item">
+              <Link
+                :href="route('articles.show', node.id)"
+                class="pa-2 rounded d-flex align-center justify-space-between text-decoration-none cursor-pointer w-100 transition-all"
+                :class="{
+                  'bg-primary text-white font-weight-bold': node.id === article.id,
+                  'text-high-emphasis hover-bg-subtle': node.id !== article.id
+                }"
+              >
+                <div class="d-flex align-center ga-2 text-truncate me-2">
+                  <VIcon :icon="node.id === article.id ? 'mdi-file-document' : 'mdi-file-document-outline'" size="16" />
+                  <span class="text-truncate">{{ node.title }}</span>
+                </div>
+                <VChip
+                  size="x-small"
+                  :variant="node.id === article.id ? 'flat' : 'tonal'"
+                  :color="node.id === article.id ? 'white' : 'secondary'"
+                  class="flex-shrink-0"
+                >
+                  v{{ node.version || '1.0' }}
+                </VChip>
+              </Link>
+
+              <!-- Children of this node if any -->
+              <div v-if="node.children && node.children.length > 0" class="ps-4 mt-1 border-s d-flex flex-column ga-1">
+                <Link
+                  v-for="subNode in node.children"
+                  :key="subNode.id"
+                  :href="route('articles.show', subNode.id)"
+                  class="pa-1 px-2 rounded d-flex align-center justify-space-between text-decoration-none cursor-pointer w-100 transition-all"
+                  :class="{
+                    'bg-primary text-white font-weight-bold': subNode.id === article.id,
+                    'text-medium-emphasis hover-bg-subtle': subNode.id !== article.id
+                  }"
+                >
+                  <div class="d-flex align-center ga-1 text-truncate me-2">
+                    <VIcon icon="mdi-subdirectory-arrow-right" size="14" />
+                    <span class="text-truncate">{{ subNode.title }}</span>
+                  </div>
+                  <VChip
+                    size="x-small"
+                    :variant="subNode.id === article.id ? 'flat' : 'tonal'"
+                    :color="subNode.id === article.id ? 'white' : 'secondary'"
+                    class="flex-shrink-0"
+                  >
+                    v{{ subNode.version || '1.0' }}
+                  </VChip>
+                </Link>
+              </div>
+            </div>
+          </div>
+        </VCard>
+
         <!-- Version Control History Card -->
         <VCard flat border class="pa-5 mb-5">
           <div class="d-flex align-center justify-space-between mb-3">
@@ -554,9 +661,9 @@ const displayVersion = computed(() => props.viewingVersion ? props.viewingVersio
           </div>
         </VCard>
 
-        <!-- Quick Meta Card -->
+        <!-- Quick Meta Card (Tata Kelola Dokumen) -->
         <VCard flat border class="pa-5 mb-5">
-          <h6 class="text-h6 font-weight-bold mb-3">Tata Kelola Dokumen</h6>
+          <h6 class="text-h6 font-weight-bold mb-3">Tata Kelola & Validasi</h6>
           <div class="d-flex flex-column ga-3 text-body-2">
             <div class="d-flex justify-space-between">
               <span class="text-medium-emphasis">Versi Aktif:</span>
@@ -565,6 +672,12 @@ const displayVersion = computed(() => props.viewingVersion ? props.viewingVersio
             <div class="d-flex justify-space-between">
               <span class="text-medium-emphasis">Status:</span>
               <span class="font-weight-semibold text-uppercase text-caption">{{ article.status }}</span>
+            </div>
+            <div v-if="article.space" class="d-flex justify-space-between">
+              <span class="text-medium-emphasis">Knowledge Space:</span>
+              <Link :href="route('spaces.show', article.space.id)" class="font-weight-bold text-primary text-decoration-none">
+                {{ article.space.name }}
+              </Link>
             </div>
             <div class="d-flex justify-space-between">
               <span class="text-medium-emphasis">Kategori:</span>
@@ -577,6 +690,12 @@ const displayVersion = computed(() => props.viewingVersion ? props.viewingVersio
             <div class="d-flex justify-space-between">
               <span class="text-medium-emphasis">Terakhir Disetujui:</span>
               <span class="font-weight-medium">{{ formatDate(article.reviewed_at) }}</span>
+            </div>
+            <div v-if="article.next_review_at" class="d-flex justify-space-between align-center pt-2 border-t">
+              <span class="text-medium-emphasis">Jadwal Review Berikutnya:</span>
+              <VChip size="x-small" variant="tonal" color="info" prepend-icon="mdi-calendar-clock">
+                {{ formatDate(article.next_review_at) }}
+              </VChip>
             </div>
           </div>
         </VCard>
@@ -652,6 +771,14 @@ const displayVersion = computed(() => props.viewingVersion ? props.viewingVersio
 
 .hover-primary:hover {
   color: rgb(var(--v-theme-primary)) !important;
+}
+
+.hover-bg-subtle {
+  transition: background-color 0.15s ease;
+}
+
+.hover-bg-subtle:hover {
+  background-color: rgba(var(--v-theme-on-surface), 0.08) !important;
 }
 
 /* Rich Text Content Styling */

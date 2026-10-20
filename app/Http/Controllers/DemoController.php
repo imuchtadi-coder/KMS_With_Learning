@@ -45,12 +45,13 @@ class DemoController extends Controller
             );
         }
 
-        // Find demo user in tenant-a first, or any tenant
+        // Find demo user in tenant-b or tenant-a or any tenant
         $demoUser = User::whereHas('roles', function ($q) use ($role) {
             $q->where('name', $role);
         })
         ->where(function ($q) {
-            $q->where('tenant_id', 'tenant-a')
+            $q->where('tenant_id', 'tenant-b')
+              ->orWhere('tenant_id', 'tenant-a')
               ->orWhereNotNull('tenant_id');
         })
         ->first();

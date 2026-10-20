@@ -323,4 +323,35 @@ class DiscussionController extends Controller
 
         return Course::query()->whereRaw('1 = 0');
     }
+
+    public function checkSimilar(Request $request)
+    {
+        $title = trim($request->query('title', ''));
+        if (mb_strlen($title) < 3) {
+            return response()->json([]);
+        }
+
+        $user = $request->user();
+        $tenantId = $user->tenant_id;
+
+        $query = Discussion::with(['acceptedReply', 'creator:id,name'])
+            ->withCount('replies');
+
+        if (!$user->hasRole('superadmin')) {
+            $query->where(function ($q) use ($tenantId) {
+                $q->where('tenant_id', $tenantId)
+                  ->orWhereHas('course', fn ($c) => $c->where('tenant_id', $tenantId));
+            });
+        }
+
+        $search = strtolower($title);
+        $similars = $query->where(function ($q) use ($search, $title) {
+                $q->whereRaw('LOWER(title) LIKE ?', ["%{$search}%"])
+                  ->orWhereRaw('similarity(title::text, ?::text) > 0.2', [$title]);
+            })
+            ->limit(5)
+            ->get(['id', 'title', 'is_resolved', 'accepted_reply_id', 'created_at']);
+
+        return response()->json($similars);
+    }
 }

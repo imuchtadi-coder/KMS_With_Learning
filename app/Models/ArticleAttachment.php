@@ -14,6 +14,7 @@ class ArticleAttachment extends Model
         'file_path',
         'file_type',
         'file_size',
+        'extracted_text',
         'downloads_count',
     ];
 

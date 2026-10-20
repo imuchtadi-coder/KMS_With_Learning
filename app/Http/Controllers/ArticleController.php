@@ -4,9 +4,12 @@ namespace App\Http\Controllers;
 
 use App\Models\Article;
 use App\Models\ArticleAttachment;
+use App\Models\ArticleReview;
 use App\Models\ArticleVersion;
 use App\Models\Category;
+use App\Models\KnowledgeSpace;
 use App\Models\Tag;
+use App\Services\DocumentTextExtractor;
 use App\Traits\HasTenantStorage;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -22,8 +25,8 @@ class ArticleController extends Controller
         $tenantId = $request->user()->tenant_id;
         $user = $request->user();
 
-        $query = Article::with(['author', 'category', 'tags', 'reviewer'])
-            ->withCount(['attachments', 'versions']);
+        $query = Article::with(['author', 'category', 'tags', 'reviewer', 'space', 'parent'])
+            ->withCount(['attachments', 'versions', 'children']);
 
         if (!$user->hasRole('superadmin')) {
             $query->where('tenant_id', $tenantId);
@@ -40,6 +43,11 @@ class ArticleController extends Controller
                     $q->orWhere('status', 'pending_review');
                 }
             });
+        }
+
+        // Space filter (Confluence-style Spaces)
+        if ($request->filled('space_id')) {
+            $query->where('space_id', $request->space_id);
         }
 
         // Search filter with PostgreSQL Full-Text Search & rank
@@ -72,7 +80,18 @@ class ArticleController extends Controller
             $query->where('status', $request->status);
         }
 
+        // Needs Review / Document Lifecycle filter
+        if ($request->boolean('needs_review')) {
+            $query->needsReview();
+        }
+
         $articles = $query->latest('created_at')->paginate(12)->withQueryString();
+
+        $spaces = KnowledgeSpace::query();
+        if (!$user->hasRole('superadmin')) {
+            $spaces->where('tenant_id', $tenantId);
+        }
+        $spaces = $spaces->active()->withCount('articles')->orderBy('name')->get();
 
         $categories = Category::query();
         if (!$user->hasRole('superadmin')) {
@@ -96,14 +115,23 @@ class ArticleController extends Controller
             $pendingReviewCount = $pendingQuery->count();
         }
 
+        // Needs review (expiry) count
+        $needsReviewQuery = Article::needsReview();
+        if (!$user->hasRole('superadmin')) {
+            $needsReviewQuery->where('tenant_id', $tenantId);
+        }
+        $needsReviewCount = $needsReviewQuery->count();
+
         return Inertia::render('Articles/Index', [
             'articles' => $articles,
+            'spaces' => $spaces,
             'categories' => $categories,
             'tags' => $tags,
-            'filters' => $request->only(['search', 'category_id', 'tag_id', 'status']),
+            'filters' => $request->only(['search', 'space_id', 'category_id', 'tag_id', 'status', 'needs_review']),
             'canCreate' => $user->can('create', Article::class),
             'isSme' => $isSme,
             'pendingReviewCount' => $pendingReviewCount,
+            'needsReviewCount' => $needsReviewCount,
         ]);
     }
 
@@ -113,6 +141,12 @@ class ArticleController extends Controller
 
         $tenantId = $request->user()->tenant_id;
         $user = $request->user();
+
+        $spaces = KnowledgeSpace::query();
+        if (!$user->hasRole('superadmin')) {
+            $spaces->where('tenant_id', $tenantId);
+        }
+        $spaces = $spaces->active()->orderBy('name')->get();
 
         $categories = Category::query();
         if (!$user->hasRole('superadmin')) {
@@ -126,12 +160,23 @@ class ArticleController extends Controller
         }
         $tags = $tags->orderBy('name')->get();
 
+        $potentialParents = Article::query();
+        if (!$user->hasRole('superadmin')) {
+            $potentialParents->where('tenant_id', $tenantId);
+        }
+        $potentialParents = $potentialParents->where('status', 'published')
+            ->orderBy('title')
+            ->get(['id', 'title', 'space_id']);
+
         $canPublishDirectly = $user->hasRole(['superadmin', 'tenant_admin', 'instructor']);
 
         return Inertia::render('Articles/Create', [
+            'spaces' => $spaces,
             'categories' => $categories,
             'tags' => $tags,
+            'potentialParents' => $potentialParents,
             'canPublishDirectly' => $canPublishDirectly,
+            'defaultSpaceId' => $request->query('space_id') ? (int) $request->query('space_id') : null,
         ]);
     }
 
@@ -141,6 +186,10 @@ class ArticleController extends Controller
 
         $validated = $request->validate([
             'title' => 'required|string|max:255',
+            'space_id' => 'nullable|exists:knowledge_spaces,id',
+            'parent_id' => 'nullable|exists:articles,id',
+            'order' => 'nullable|integer',
+            'review_cycle_days' => 'nullable|integer|min:15|max:730',
             'excerpt' => 'nullable|string|max:500',
             'content' => 'required|string',
             'category_id' => 'nullable|exists:categories,id',
@@ -163,9 +212,14 @@ class ArticleController extends Controller
         }
 
         $versionNumber = $validated['version'] ?: '1.0';
+        $cycleDays = $validated['review_cycle_days'] ?? 180;
 
         $article = Article::create([
             'tenant_id' => $tenantId,
+            'space_id' => $validated['space_id'] ?? null,
+            'parent_id' => $validated['parent_id'] ?? null,
+            'order' => $validated['order'] ?? 0,
+            'review_cycle_days' => $cycleDays,
             'title' => $validated['title'],
             'version' => $versionNumber,
             'excerpt' => $validated['excerpt'] ?? Str::limit(strip_tags($validated['content']), 160),
@@ -174,6 +228,7 @@ class ArticleController extends Controller
             'author_id' => $user->id,
             'status' => $status,
             'published_at' => $status === 'published' ? now() : null,
+            'next_review_at' => $status === 'published' ? now()->addDays($cycleDays) : null,
             'reviewed_by' => $status === 'published' ? $user->id : null,
             'reviewed_at' => $status === 'published' ? now() : null,
         ]);
@@ -205,6 +260,8 @@ class ArticleController extends Controller
                     $filename
                 );
 
+                $extractedText = DocumentTextExtractor::extractText($path, $ext);
+
                 ArticleAttachment::create([
                     'article_id' => $article->id,
                     'tenant_id' => $tenantId,
@@ -212,6 +269,7 @@ class ArticleController extends Controller
                     'file_path' => $path,
                     'file_type' => $ext,
                     'file_size' => $file->getSize(),
+                    'extracted_text' => $extractedText,
                 ]);
             }
         }
@@ -237,6 +295,10 @@ class ArticleController extends Controller
             'tags',
             'attachments',
             'reviewer',
+            'space.manager',
+            'parent',
+            'children.author',
+            'reviewLogs.reviewer',
             'versions.creator',
             'versions.reviewer',
         ]);
@@ -253,18 +315,34 @@ class ArticleController extends Controller
             $viewingVersion = $article->versions->firstWhere('id', (int) $request->version_id);
         }
 
-        // Related articles from same category
+        // Confluence-like Space document tree
+        $spaceTree = [];
+        if ($article->space_id) {
+            $spaceTree = Article::where('space_id', $article->space_id)
+                ->whereNull('parent_id')
+                ->with(['children' => fn($q) => $q->orderBy('order')])
+                ->where(function ($q) use ($user) {
+                    $q->where('status', 'published')
+                      ->orWhere('author_id', $user->id);
+                })
+                ->orderBy('order')
+                ->get(['id', 'title', 'slug', 'parent_id', 'space_id', 'version', 'status']);
+        }
+
+        // Related articles from same category or space
         $relatedArticles = Article::query()
             ->where('tenant_id', $article->tenant_id)
             ->where('id', '!=', $article->id)
             ->where('status', 'published')
-            ->when($article->category_id, fn($q) => $q->where('category_id', $article->category_id))
+            ->when($article->space_id, fn($q) => $q->where('space_id', $article->space_id))
+            ->when(!$article->space_id && $article->category_id, fn($q) => $q->where('category_id', $article->category_id))
             ->latest('published_at')
             ->limit(4)
             ->get(['id', 'title', 'slug', 'excerpt', 'created_at', 'views_count']);
 
         return Inertia::render('Articles/Show', [
             'article' => $article,
+            'spaceTree' => $spaceTree,
             'canEdit' => $canEdit,
             'canDelete' => $canDelete,
             'canReview' => $canReview,
@@ -283,6 +361,12 @@ class ArticleController extends Controller
         $tenantId = $request->user()->tenant_id;
         $user = $request->user();
 
+        $spaces = KnowledgeSpace::query();
+        if (!$user->hasRole('superadmin')) {
+            $spaces->where('tenant_id', $tenantId);
+        }
+        $spaces = $spaces->active()->orderBy('name')->get();
+
         $categories = Category::query();
         if (!$user->hasRole('superadmin')) {
             $categories->where('tenant_id', $tenantId);
@@ -295,12 +379,23 @@ class ArticleController extends Controller
         }
         $tags = $tags->orderBy('name')->get();
 
+        $potentialParents = Article::query();
+        if (!$user->hasRole('superadmin')) {
+            $potentialParents->where('tenant_id', $tenantId);
+        }
+        $potentialParents = $potentialParents->where('status', 'published')
+            ->where('id', '!=', $article->id)
+            ->orderBy('title')
+            ->get(['id', 'title', 'space_id']);
+
         $canPublishDirectly = $user->hasRole(['superadmin', 'tenant_admin', 'instructor']);
 
         return Inertia::render('Articles/Edit', [
             'article' => $article,
+            'spaces' => $spaces,
             'categories' => $categories,
             'tags' => $tags,
+            'potentialParents' => $potentialParents,
             'canPublishDirectly' => $canPublishDirectly,
         ]);
     }
@@ -311,6 +406,10 @@ class ArticleController extends Controller
 
         $validated = $request->validate([
             'title' => 'required|string|max:255',
+            'space_id' => 'nullable|exists:knowledge_spaces,id',
+            'parent_id' => 'nullable|exists:articles,id',
+            'order' => 'nullable|integer',
+            'review_cycle_days' => 'nullable|integer|min:15|max:730',
             'excerpt' => 'nullable|string|max:500',
             'content' => 'required|string',
             'category_id' => 'nullable|exists:categories,id',
@@ -343,11 +442,24 @@ class ArticleController extends Controller
         }
 
         $publishedAt = $article->published_at;
-        if ($status === 'published' && !$publishedAt) {
-            $publishedAt = now();
+        $cycleDays = $validated['review_cycle_days'] ?? ($article->review_cycle_days ?: 180);
+        $nextReviewAt = $article->next_review_at;
+
+        if ($status === 'published') {
+            if (!$publishedAt) {
+                $publishedAt = now();
+            }
+            if (!$nextReviewAt) {
+                $nextReviewAt = now()->addDays($cycleDays);
+            }
         }
 
         $article->update([
+            'space_id' => $validated['space_id'] ?? $article->space_id,
+            'parent_id' => $validated['parent_id'] ?? $article->parent_id,
+            'order' => $validated['order'] ?? $article->order,
+            'review_cycle_days' => $cycleDays,
+            'next_review_at' => $nextReviewAt,
             'title' => $validated['title'],
             'version' => $nextVersion,
             'excerpt' => $validated['excerpt'] ?? Str::limit(strip_tags($validated['content']), 160),
@@ -386,6 +498,8 @@ class ArticleController extends Controller
                     $filename
                 );
 
+                $extractedText = DocumentTextExtractor::extractText($path, $ext);
+
                 ArticleAttachment::create([
                     'article_id' => $article->id,
                     'tenant_id' => $tenantId,
@@ -393,6 +507,7 @@ class ArticleController extends Controller
                     'file_path' => $path,
                     'file_type' => $ext,
                     'file_size' => $file->getSize(),
+                    'extracted_text' => $extractedText,
                 ]);
             }
         }
@@ -418,13 +533,25 @@ class ArticleController extends Controller
         $this->authorize('review', $article);
 
         $user = $request->user();
+        $notes = $request->input('review_notes') ?: 'Disetujui oleh SME dan resmi dipublikasikan.';
+        $cycle = $article->review_cycle_days ?: 180;
 
         $article->update([
             'status' => 'published',
             'published_at' => $article->published_at ?? now(),
             'reviewed_by' => $user->id,
             'reviewed_at' => now(),
-            'review_notes' => $request->input('review_notes') ?: 'Disetujui oleh SME dan resmi dipublikasikan.',
+            'review_notes' => $notes,
+            'next_review_at' => now()->addDays($cycle),
+        ]);
+
+        // Record in ArticleReview audit log
+        ArticleReview::create([
+            'article_id' => $article->id,
+            'version' => $article->version ?: '1.0',
+            'reviewer_id' => $user->id,
+            'status' => 'approved',
+            'notes' => $notes,
         ]);
 
         // Update latest version snapshot approval details
@@ -454,6 +581,15 @@ class ArticleController extends Controller
             'reviewed_by' => $user->id,
             'reviewed_at' => now(),
             'review_notes' => $validated['review_notes'],
+        ]);
+
+        // Record in ArticleReview audit log
+        ArticleReview::create([
+            'article_id' => $article->id,
+            'version' => $article->version ?: '1.0',
+            'reviewer_id' => $user->id,
+            'status' => 'revision_requested',
+            'notes' => $validated['review_notes'],
         ]);
 
         return redirect()->back()->with('success', 'Permintaan revisi berhasil dikirimkan kepada penulis.');

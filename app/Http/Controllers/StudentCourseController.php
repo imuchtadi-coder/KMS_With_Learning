@@ -51,7 +51,7 @@ class StudentCourseController extends Controller
             'inProgress' => $inProgress,
             'completed' => $completed,
             'certificates' => $certificates,
-            'tenantName' => $user->tenant?->name ?? 'Platform',
+            'tenantName' => $user->tenant?->branding?->agency_name ?? $user->tenant?->name ?? 'KMS Learning',
         ]);
     }
 

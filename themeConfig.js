@@ -8,7 +8,7 @@ import { AppContentLayoutNav, ContentWidth, FooterType, NavbarType } from '@layo
 
 export const { themeConfig, layoutConfig } = defineThemeConfig({
   app: {
-    title: 'KITsuluh',
+    title: 'KMS Learning',
     logo: h('img', { src: '/img/logok.png', style: 'height: 40px; width: auto; line-height: 0;' }),
     contentWidth: ContentWidth.Boxed,
     contentLayoutNav: AppContentLayoutNav.Vertical,

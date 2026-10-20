@@ -20,4 +20,11 @@ export default [
     action: 'superadmin',
     subject: 'role',
   },
+  {
+    title: 'Branding & Kontak CS',
+    icon: { icon: 'mdi-palette-outline' },
+    href: '/admin/branding',
+    action: 'superadmin',
+    subject: 'role',
+  },
 ]

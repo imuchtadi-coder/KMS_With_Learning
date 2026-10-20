@@ -16,7 +16,7 @@ class SearchController extends Controller
     {
         $q = $request->input('q');
         $type = $request->input('type', 'all');
-        $user = auth()->user();
+        $user = $request->user() ?: auth()->user();
 
         if (!$q || strlen(trim($q)) < 2) {
             return Inertia::render('Search/Index', ['q' => $q, 'results' => collect(), 'type' => $type]);
@@ -68,7 +68,11 @@ class SearchController extends Controller
                 $query->whereRaw("search_vector @@ websearch_to_tsquery('simple', ?)", [$searchTerm])
                     ->orWhereRaw("LOWER(title) LIKE ?", ['%' . strtolower($searchTerm) . '%'])
                     ->orWhereRaw("LOWER(excerpt) LIKE ?", ['%' . strtolower($searchTerm) . '%'])
-                    ->orWhereRaw("LOWER(content) LIKE ?", ['%' . strtolower($searchTerm) . '%']);
+                    ->orWhereRaw("LOWER(content) LIKE ?", ['%' . strtolower($searchTerm) . '%'])
+                    ->orWhereHas('attachments', function ($attQuery) use ($searchTerm) {
+                        $attQuery->whereRaw("search_vector @@ websearch_to_tsquery('simple', ?)", [$searchTerm])
+                                 ->orWhereRaw("LOWER(extracted_text) LIKE ?", ['%' . strtolower($searchTerm) . '%']);
+                    });
             })
             ->selectRaw("
                 articles.*,
@@ -80,16 +84,30 @@ class SearchController extends Controller
                     'StartSel=<mark>, StopSel=</mark>, MaxWords=35, MinWords=15, HighlightAll=false'
                 ) as search_snippet
             ", [$searchTerm, $searchTerm])
-            ->with(['category', 'tags', 'author'])
+            ->with(['category', 'tags', 'author', 'space', 'attachments'])
             ->orderByDesc('rank')
             ->latest('published_at')
             ->get()
-            ->map(fn($a) => [
-                'type' => 'article',
-                'item' => $a,
-                'snippet' => $a->search_snippet ?: $a->excerpt,
-                'url' => route('articles.show', $a),
-            ]);
+            ->map(function ($a) use ($searchTerm) {
+                // Check if match was found inside attachment
+                $matchingAttachment = $a->attachments->first(function ($att) use ($searchTerm) {
+                    return str_contains(strtolower($att->extracted_text ?? ''), strtolower($searchTerm))
+                        || str_contains(strtolower($att->title ?? ''), strtolower($searchTerm));
+                });
+
+                $snippet = $a->search_snippet ?: $a->excerpt;
+                if ($matchingAttachment) {
+                    $snippet = "📄 [Ditemukan di dalam berkas {$matchingAttachment->title}.{$matchingAttachment->file_type}] " . $snippet;
+                }
+
+                return [
+                    'type' => 'article',
+                    'item' => $a,
+                    'snippet' => $snippet,
+                    'matched_attachment' => $matchingAttachment ? $matchingAttachment->title : null,
+                    'url' => route('articles.show', $a),
+                ];
+            });
 
             $results = $results->concat($articles);
         }

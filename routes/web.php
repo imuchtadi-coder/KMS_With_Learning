@@ -8,6 +8,9 @@ use App\Http\Controllers\Admin\GamificationController;
 use App\Http\Controllers\Admin\TagController;
 use App\Http\Controllers\AdminController;
 use App\Http\Controllers\ArticleController;
+use App\Http\Controllers\KnowledgeSpaceController;
+use App\Http\Controllers\KmsAnalyticsController;
+use App\Http\Controllers\SmeDirectoryController;
 use App\Http\Controllers\AssessmentAnalyticsController;
 use App\Http\Controllers\CertificateController;
 use App\Http\Controllers\DiscussionController;
@@ -115,9 +118,10 @@ Route::middleware('auth')->group(function () {
         Route::put('/admin/mail-settings', [AdminController::class, 'updateMailSettings'])->name('admin.mail-settings.update');
         Route::post('/admin/mail-settings/test', [AdminController::class, 'testMailSettings'])->name('admin.mail-settings.test');
 
-        // Branding (tenant admin only)
-        Route::middleware('role:tenant_admin')->group(function () {Route::get('/admin/branding', [AdminController::class, 'branding'])->name('admin.branding');
-        Route::put('/admin/branding', [AdminController::class, 'updateBranding'])->name('admin.branding.update');
+        // Branding & Layanan CS (tenant admin & superadmin)
+        Route::middleware('role:tenant_admin|superadmin')->group(function () {
+            Route::get('/admin/branding', [AdminController::class, 'branding'])->name('admin.branding');
+            Route::put('/admin/branding', [AdminController::class, 'updateBranding'])->name('admin.branding.update');
         });
 
         // Categories & Tags
@@ -287,7 +291,9 @@ Route::middleware('auth')->group(function () {
     // Search routes (all authenticated users)
     Route::get('/search', [SearchController::class, 'index'])->name('search.index');
 
-    // Knowledge Base / Articles routes (all authenticated users)
+    // Knowledge Base Spaces, Articles & Analytics routes (all authenticated users)
+    Route::get('/kms/analytics', [KmsAnalyticsController::class, 'index'])->name('kms.analytics');
+    Route::resource('spaces', KnowledgeSpaceController::class);
     Route::get('/articles/attachments/{attachment}/download', [ArticleController::class, 'downloadAttachment'])->name('articles.attachments.download');
     Route::delete('/articles/attachments/{attachment}', [ArticleController::class, 'deleteAttachment'])->name('articles.attachments.destroy');
     Route::post('/articles/{article}/submit-review', [ArticleController::class, 'submitReview'])->name('articles.submit-review');
@@ -307,6 +313,14 @@ Route::middleware('auth')->group(function () {
     Route::put('/discussions/{discussion}/replies/{reply}', [DiscussionReplyController::class, 'update'])->name('discussions.replies.update');
     Route::delete('/discussions/{discussion}/replies/{reply}', [DiscussionReplyController::class, 'destroy'])->name('discussions.replies.destroy');
     Route::post('/discussions/{discussion}/replies/{reply}/solution', [DiscussionReplyController::class, 'toggleSolution'])->name('discussions.replies.solution');
+    Route::get('/discussions-check-similar', [DiscussionController::class, 'checkSimilar'])->name('discussions.check-similar');
+
+    // SME (Subject Matter Expert) Directory routes
+    Route::get('/experts', [SmeDirectoryController::class, 'index'])->name('experts.index');
+    Route::post('/experts/skills/{userSkill}/endorse', [SmeDirectoryController::class, 'endorse'])->name('experts.endorse');
+    Route::post('/experts/skills/add', [SmeDirectoryController::class, 'addSkill'])->name('experts.skills.add');
+    Route::delete('/experts/skills/{userSkill}', [SmeDirectoryController::class, 'deleteSkill'])->name('experts.skills.destroy');
+    Route::post('/experts/skills/{userSkill}/verify', [SmeDirectoryController::class, 'verifySkill'])->name('experts.skills.verify');
 
     // Student routes
     Route::middleware([\App\Http\Middleware\InitializeTenancyByDomainOrAuthenticatedTenant::class, 'role:student',])->group(function () {
@@ -337,17 +351,6 @@ Route::middleware('auth')->group(function () {
         Route::post('/student/lessons/update-progress', [ProgressController::class, 'update'])
             ->name('student.lessons.update-progress');
 
-    // Route::middleware('role:student')->group(function () {
-    //     Route::get('/student', [StudentCourseController::class, 'dashboard'])->name('student.dashboard');
-    //     Route::get('/student/courses', [StudentCourseController::class, 'listCourses'])->name('student.courses.list');
-    //     Route::get('/student/courses/{course}', [StudentCourseController::class, 'showCourse'])->name('student.courses.show');
-    //     Route::post('/student/courses/{course}/enroll', [StudentCourseController::class, 'enroll'])->name('student.courses.enroll');
-    //     Route::get('/student/enrollments', [StudentCourseController::class, 'myEnrollments'])->name('student.enrollments');
-    //     Route::get('/student/enrollments/{enrollment}', [StudentCourseController::class, 'showEnrollment'])->name('student.enrollments.show');
-    //     Route::get('/student/courses/{course}/lessons/{lesson}', [StudentCourseController::class, 'viewLesson'])->name('student.lessons.view');
-    //     Route::post('/student/lessons/{lesson}/complete', [StudentCourseController::class, 'completeLesson'])->name('student.lessons.complete');
-    //     Route::post('/student/lessons/update-progress', [ProgressController::class, 'update'])->name('student.lessons.update-progress');
-        
         // Learning Paths
         Route::get('/student/learning-paths', [StudentLearningPathController::class, 'index'])->name('student.learning-paths.index');
         Route::get('/student/learning-paths/my-paths', [StudentLearningPathController::class, 'myPaths'])->name('student.learning-paths.my-paths');

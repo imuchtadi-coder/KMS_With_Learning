@@ -1,6 +1,6 @@
 <script setup>
-import { Head, Link, router } from '@inertiajs/vue3'
-import { ref, onMounted, onUnmounted } from 'vue'
+import { Head, Link, router, usePage } from '@inertiajs/vue3'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 
 // Existing Assets
 import laptopGirl from '@images/illustrations/laptop-girl.png'
@@ -9,6 +9,8 @@ import avatar1 from '@images/avatars/avatar-1.png'
 import avatar2 from '@images/avatars/avatar-2.png'
 import avatar3 from '@images/avatars/avatar-3.png'
 import avatar4 from '@images/avatars/avatar-4.png'
+
+const page = usePage()
 
 const props = defineProps({
   stats: {
@@ -23,6 +25,18 @@ const props = defineProps({
     type: Array,
     default: () => [],
   },
+  branding: {
+    type: Object,
+    default: null,
+  },
+})
+
+const appName = computed(() => {
+  return props.branding?.agency_name || page.props.tenantBranding?.agency_name || 'KMS Learning'
+})
+
+const appLogo = computed(() => {
+  return props.branding?.logo_url || page.props.tenantBranding?.logo_url || '/img/logok.png'
 })
 
 const mobileDrawer = ref(false)
@@ -84,7 +98,7 @@ const getWhatsappUrl = () => {
   if (!props.cs?.phone_number) return null
   const phone = props.cs.phone_number.replace(/[^0-9]/g, '')
   const text = encodeURIComponent(
-    'Halo Tim KITsuluh, saya tertarik untuk konsultasi implementasi LMS KITsuluh di institusi kami.'
+    `Halo Tim ${appName.value}, saya tertarik untuk konsultasi implementasi LMS ${appName.value} di institusi kami.`
   )
   return `https://wa.me/${phone}?text=${text}`
 }
@@ -167,14 +181,14 @@ const steps = [
   },
 ]
 
-const testimonials = [
+const testimonials = computed(() => [
   {
     avatar: avatar1,
     name: 'Dr. Hendra Saputra',
     role: 'Direktur Pelatihan Vokasi',
     org: 'Politeknik Pertanian Terpadu',
     rating: 5,
-    comment: 'Implementasi KITsuluh membuat manajemen sertifikasi dan pelatihan ratusan penyuluh pertanian kami menjadi sangat terstruktur dan terpantau efisien.',
+    comment: `Implementasi ${appName.value} membuat manajemen sertifikasi dan pelatihan ratusan penyuluh pertanian kami menjadi sangat terstruktur dan terpantau efisien.`,
   },
   {
     avatar: avatar2,
@@ -192,16 +206,16 @@ const testimonials = [
     rating: 5,
     comment: 'Antarmukanya sangat mudah digunakan di HP maupun laptop! Papan peringkat dan sistem poin XP membuat belajar tidak membosankan.',
   },
-]
+])
 
-const faqs = [
+const faqs = computed(() => [
   {
-    q: 'Bagaimana cara kerja isolasi multi-tenant di KITsuluh?',
+    q: `Bagaimana cara kerja isolasi multi-tenant di ${appName.value}?`,
     a: 'Setiap institusi (tenant) memiliki subdomain mandiri dan ruang isolasi data terpisah. Data siswa, kursus, sertifikat, dan pengaturan admin antar institusi dipisahkan secara ketat sehingga privasi dan integritas data terjamin.',
   },
   {
     q: 'Apakah institusi saya bisa menggunakan logo dan nama lembaga sendiri?',
-    a: 'Tentu saja. KITsuluh mendukung kustomisasi identitas (white-labeling) yang memungkinkan Anda menampilkan nama lembaga, logo, tagline, serta format sertifikat berlogo resmi instansi Anda.',
+    a: `Tentu saja. ${appName.value} mendukung kustomisasi identitas (white-labeling) yang memungkinkan Anda menampilkan nama lembaga, logo, tagline, serta format sertifikat berlogo resmi instansi Anda.`,
   },
   {
     q: 'Bagaimana mekanisme Uji Coba Demo 1-Klik?',
@@ -209,17 +223,17 @@ const faqs = [
   },
   {
     q: 'Apakah materi video streaming hemat kuota?',
-    a: 'Ya, KITsuluh mengonversi seluruh materi video instruktur menggunakan teknologi HLS (HTTP Live Streaming) adaptif. Kualitas tayangan otomatis menyesuaikan kecepatan internet pengguna sehingga lancar dan hemat kuota.',
+    a: `Ya, ${appName.value} mengonversi seluruh materi video instruktur menggunakan teknologi HLS (HTTP Live Streaming) adaptif. Kualitas tayangan otomatis menyesuaikan kecepatan internet pengguna sehingga lancar dan hemat kuota.`,
   },
   {
     q: 'Metode pembayaran apa saja yang didukung untuk biaya langganan?',
     a: 'Kami mendukung transfer antar bank (Virtual Account), QRIS instan seluruh bank & e-Wallet (GoPay, OVO, Dana, ShopeePay), serta konfirmasi cepat melalui tim Customer Service resmi kami.',
   },
-]
+])
 </script>
 
 <template>
-  <Head title="KITsuluh — Learning Management System Multi-Tenant Terpadu" />
+  <Head :title="`${appName} — Learning Management System Multi-Tenant Terpadu`" />
 
   <VApp theme="light" class="landing-app">
     <div class="landing-page">
@@ -233,8 +247,8 @@ const faqs = [
       >
         <div class="d-flex align-center justify-space-between mb-6 pb-3 border-b">
           <div class="d-flex align-center ga-2">
-            <img src="/img/logok.png" alt="KITsuluh" height="34" />
-            <span class="text-subtitle-1 font-weight-bold text-primary">KITsuluh</span>
+            <img :src="appLogo" :alt="appName" height="34" />
+            <span class="text-subtitle-1 font-weight-bold text-primary">{{ appName }}</span>
           </div>
           <VBtn icon="mdi-close" variant="text" size="small" @click="mobileDrawer = false" />
         </div>
@@ -304,10 +318,10 @@ const faqs = [
             <!-- Brand Logo -->
             <Link href="/" class="brand-link d-flex align-center ga-3 text-decoration-none">
               <div class="brand-logo-wrap d-flex align-center justify-center">
-                <img src="/img/logok.png" alt="KITsuluh" height="40" class="brand-logo" />
+                <img :src="appLogo" :alt="appName" height="40" class="brand-logo" />
               </div>
               <div>
-                <div class="brand-name text-h6 font-weight-black text-primary lh-1">KITsuluh</div>
+                <div class="brand-name text-h6 font-weight-black text-primary lh-1">{{ appName }}</div>
                 <div class="text-caption text-medium-emphasis">Multi-Tenant LMS Platform</div>
               </div>
             </Link>
@@ -406,7 +420,7 @@ const faqs = [
 
               <h1 class="hero-headline text-h3 text-md-h2 font-weight-black mb-4 lh-tight">
                 Bangun Portal Pembelajaran Mandiri dengan
-                <span class="text-gradient">KITsuluh</span>
+                <span class="text-gradient">{{ appName }}</span>
               </h1>
 
               <p class="hero-description text-body-1 mb-8" style="max-width: 600px;">
@@ -467,7 +481,7 @@ const faqs = [
                 <div class="hero-illustration-box position-relative z-index-1">
                   <img
                     :src="laptopGirl"
-                    alt="KITsuluh LMS Platform"
+                    :alt="`${appName} LMS Platform`"
                     class="hero-illustration img-fluid"
                   />
                 </div>
@@ -519,7 +533,7 @@ const faqs = [
               Eksplorasi Demo Interaktif 1-Klik
             </h2>
             <p class="section-subtitle text-body-1 text-medium-emphasis mx-auto" style="max-width: 640px;">
-              Uji langsung kehandalan KITsuluh sesuai peran yang Anda inginkan. Cukup klik tombol di bawah untuk masuk ke dasbor aktif tanpa perlu registrasi.
+              Uji langsung kehandalan {{ appName }} sesuai peran yang Anda inginkan. Cukup klik tombol di bawah untuk masuk ke dasbor aktif tanpa perlu registrasi.
             </p>
           </div>
 
@@ -832,7 +846,7 @@ const faqs = [
               Dipercaya oleh Pengajar & Institusi
             </h2>
             <p class="section-subtitle text-body-1 text-medium-emphasis mx-auto" style="max-width: 600px;">
-              Kisah sukses para pimpinan institusi dan peserta yang mentransformasi pendidikan bersama KITsuluh.
+              Kisah sukses para pimpinan institusi dan peserta yang mentransformasi pendidikan bersama {{ appName }}.
             </p>
           </div>
 
@@ -965,8 +979,8 @@ const faqs = [
 
                 <!-- Button CTA -->
                 <VBtn
-                  :color="plan.badge ? 'primary' : 'secondary'"
-                  :variant="plan.badge ? 'elevated' : 'tonal'"
+                  color="primary"
+                  variant="elevated"
                   size="large"
                   block
                   prepend-icon="mdi-domain-plus"
@@ -1031,7 +1045,7 @@ const faqs = [
                 Siap Mentransformasi Pembelajaran di Organisasi Anda?
               </h2>
               <p class="text-body-1 mb-8 opacity-90 mx-auto" style="max-width: 640px; line-height: 1.7;">
-                Bergabunglah bersama ribuan peserta dan puluhan lembaga yang telah menggunakan KITsuluh untuk pelatihan berkualitas dan sertifikasi terpercaya.
+                Bergabunglah bersama ribuan peserta dan puluhan lembaga yang telah menggunakan {{ appName }} untuk pelatihan berkualitas dan sertifikasi terpercaya.
               </p>
 
               <div class="d-flex flex-wrap align-center justify-center ga-4">
@@ -1068,14 +1082,14 @@ const faqs = [
           <VRow justify="space-between">
             <VCol cols="12" md="5" class="mb-6 mb-md-0">
               <div class="d-flex align-center ga-3 mb-3">
-                <img src="/img/logok.png" alt="KITsuluh" height="40" />
-                <span class="text-h6 font-weight-black text-primary">KITsuluh</span>
+                <img :src="appLogo" :alt="appName" height="40" />
+                <span class="text-h6 font-weight-black text-primary">{{ appName }}</span>
               </div>
               <p class="text-body-2 text-medium-emphasis mb-4" style="max-width: 400px; line-height: 1.6;">
                 Platform Learning Management System multi-tenant modern dengan kurikulum adaptif, streaming hemat kuota, dan sertifikasi digital terverifikasi.
               </p>
               <div class="text-caption text-medium-emphasis">
-                &copy; {{ new Date().getFullYear() }} KITsuluh. All rights reserved.
+                &copy; {{ new Date().getFullYear() }} {{ appName }}. All rights reserved.
               </div>
             </VCol>
 

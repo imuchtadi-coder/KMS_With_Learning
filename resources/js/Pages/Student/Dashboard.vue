@@ -25,7 +25,7 @@ const props = defineProps({
   },
   tenantName: {
     type: String,
-    default: 'Platform',
+    default: 'KMS Learning',
   },
 })
 
