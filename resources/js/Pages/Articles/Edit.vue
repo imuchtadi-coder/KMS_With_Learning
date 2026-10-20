@@ -5,8 +5,10 @@ import TiptapEditor from '@core/components/TiptapEditor.vue'
 
 const props = defineProps({
   article: { type: Object, required: true },
+  spaces: { type: Array, default: () => [] },
   categories: { type: Array, default: () => [] },
   tags: { type: Array, default: () => [] },
+  potentialParents: { type: Array, default: () => [] },
   canPublishDirectly: { type: Boolean, default: false },
 })
 
@@ -26,6 +28,10 @@ const suggestNextVersion = () => {
 const form = useForm({
   _method: 'put',
   title: props.article.title || '',
+  space_id: props.article.space_id || null,
+  parent_id: props.article.parent_id || null,
+  review_cycle_days: props.article.review_cycle_days || 180,
+  order: props.article.order || 0,
   new_version: suggestNextVersion(),
   excerpt: props.article.excerpt || '',
   category_id: props.article.category_id || '',
@@ -345,6 +351,56 @@ const submit = () => {
           <!-- Taxonomy Card -->
           <VCard flat border class="pa-4">
             <h6 class="text-subtitle-2 font-weight-bold mb-3">Taksonomi & Tag</h6>
+
+            <!-- Knowledge Space -->
+            <div v-if="spaces.length > 0" class="mb-3">
+              <VSelect
+                v-model="form.space_id"
+                :items="spaces"
+                item-title="name"
+                item-value="id"
+                label="Knowledge Space"
+                variant="outlined"
+                density="compact"
+                prepend-inner-icon="mdi-folder-multiple-outline"
+                clearable
+                :error-messages="form.errors.space_id"
+              />
+            </div>
+
+            <!-- Parent Document -->
+            <div v-if="potentialParents.length > 0" class="mb-3">
+              <VAutocomplete
+                v-model="form.parent_id"
+                :items="potentialParents"
+                item-title="title"
+                item-value="id"
+                label="Dokumen Induk (Opsional)"
+                variant="outlined"
+                density="compact"
+                prepend-inner-icon="mdi-file-tree-outline"
+                clearable
+                :error-messages="form.errors.parent_id"
+              />
+            </div>
+
+            <!-- Review Cycle -->
+            <div class="mb-3">
+              <VSelect
+                v-model="form.review_cycle_days"
+                :items="[
+                  { title: '3 Bulan (90 Hari) - Kritis/Dinamis', value: 90 },
+                  { title: '6 Bulan (180 Hari) - Standar SOP', value: 180 },
+                  { title: '1 Tahun (365 Hari) - Regulasi Stabil', value: 365 },
+                ]"
+                item-title="title"
+                item-value="value"
+                label="Masa Siklus Review"
+                variant="outlined"
+                density="compact"
+                prepend-inner-icon="mdi-history"
+              />
+            </div>
 
             <!-- Category -->
             <div class="mb-3">

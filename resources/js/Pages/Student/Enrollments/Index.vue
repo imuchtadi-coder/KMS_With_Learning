@@ -306,7 +306,7 @@ function resolveChipColor(tag) {
         <VCard
           flat
           border
-          class="h-100 d-flex flex-column rounded-xl course-card transition-swing overflow-hidden bg-surface"
+          class="h-100 d-flex flex-column rounded-lg course-card transition-swing overflow-hidden bg-surface"
         >
           <!-- Card Thumbnail with Ambient Overlay -->
           <div
@@ -316,53 +316,59 @@ function resolveChipColor(tag) {
             <VImg
               :src="course.thumbnail || course.tutorImg"
               cover
-              height="180"
+              height="130"
               class="w-100 bg-grey-darken-4"
             >
               <template #placeholder>
                 <div class="d-flex align-center justify-center fill-height bg-grey-darken-3">
-                  <VIcon icon="mdi-school-outline" size="48" color="grey-lighten-1" />
+                  <VIcon icon="mdi-school-outline" size="36" color="grey-lighten-1" />
                 </div>
               </template>
             </VImg>
 
+            <!-- Gradient Shade for Text Legibility -->
+            <div
+              class="position-absolute w-100 h-100"
+              style="inset: 0; background: linear-gradient(180deg, rgba(0,0,0,0.38) 0%, rgba(0,0,0,0.08) 40%, rgba(0,0,0,0.48) 100%); pointer-events: none;"
+            />
+
             <!-- Overlay Badges -->
-            <div class="card-cover-badges pa-3 d-flex justify-space-between align-start w-100 position-absolute" style="top: 0; left: 0;">
+            <div class="card-cover-badges pa-2-5 d-flex justify-space-between align-start w-100 position-absolute" style="top: 0; left: 0; z-index: 2;">
               <VChip
-                size="small"
+                size="x-small"
                 variant="flat"
                 :color="resolveChipColor(course.tags || course.category)"
                 label
-                class="font-weight-medium shadow-sm"
+                class="font-weight-semibold shadow-sm"
               >
                 {{ course.tags || course.category || 'Umum' }}
               </VChip>
 
               <VChip
                 v-if="course.progress === 100 || course.completed_at"
-                size="small"
+                size="x-small"
                 color="success"
                 variant="flat"
                 label
                 class="font-weight-bold shadow-sm"
               >
-                <VIcon start icon="mdi-check-circle" size="14" />
+                <VIcon start icon="mdi-check-circle" size="12" />
                 Selesai
               </VChip>
               <VChip
                 v-else-if="course.progress > 0"
-                size="small"
+                size="x-small"
                 color="warning"
                 variant="flat"
                 label
                 class="font-weight-bold shadow-sm"
               >
-                <VIcon start icon="mdi-progress-clock" size="14" />
+                <VIcon start icon="mdi-progress-clock" size="12" />
                 {{ course.progress }}%
               </VChip>
               <VChip
                 v-else
-                size="small"
+                size="x-small"
                 color="secondary"
                 variant="flat"
                 label
@@ -374,52 +380,56 @@ function resolveChipColor(tag) {
           </div>
 
           <!-- Card Content Body -->
-          <VCardText class="pa-5 flex-grow-1 d-flex flex-column">
-            <!-- Rating & Level Row -->
-            <div class="d-flex justify-space-between align-center mb-2">
-              <div class="d-flex align-center ga-1 text-caption">
-                <VIcon icon="mdi-star" color="warning" size="16" />
-                <span class="font-weight-bold text-high-emphasis">{{ Number(course.rating || 0).toFixed(1) }}</span>
-                <span class="text-medium-emphasis">({{ course.ratingCount || 0 }})</span>
+          <VCardText class="pa-3-5 flex-grow-1 d-flex flex-column justify-space-between">
+            <div>
+              <!-- Rating & Time Row -->
+              <div class="d-flex justify-space-between align-center mb-1-5">
+                <div class="d-flex align-center ga-1 text-caption">
+                  <VIcon icon="mdi-star" color="warning" size="14" />
+                  <span class="font-weight-bold text-high-emphasis" style="font-size: 0.75rem !important;">{{ Number(course.rating || 0).toFixed(1) }}</span>
+                  <span class="text-medium-emphasis" style="font-size: 0.72rem !important;">({{ course.ratingCount || 0 }})</span>
+                </div>
+
+                <span class="text-caption text-medium-emphasis d-flex align-center ga-1" style="font-size: 0.72rem !important;">
+                  <VIcon icon="mdi-clock-outline" size="13" />
+                  {{ course.time || 'Akses Fleksibel' }}
+                </span>
               </div>
 
-              <span class="text-caption text-medium-emphasis d-flex align-center ga-1">
-                <VIcon icon="mdi-clock-outline" size="14" />
-                {{ course.time || 'Akses Fleksibel' }}
-              </span>
-            </div>
+              <!-- Title -->
+              <h5
+                class="text-subtitle-1 font-weight-bold text-high-emphasis mb-1-5 line-clamp-1 cursor-pointer course-hover-title"
+                :title="course.courseTitle"
+                style="font-size: 0.925rem !important; line-height: 1.35;"
+                @click="goToLearning(course)"
+              >
+                {{ course.courseTitle }}
+              </h5>
 
-            <!-- Title -->
-            <h5
-              class="text-subtitle-1 font-weight-bold text-high-emphasis mb-2 line-clamp-2 cursor-pointer course-hover-title"
-              :title="course.courseTitle"
-              @click="goToLearning(course)"
-            >
-              {{ course.courseTitle }}
-            </h5>
-
-            <!-- Instructor Line -->
-            <div class="d-flex align-center ga-2 mb-4">
-              <VAvatar size="22" :image="course.instructorAvatar">
-                <span class="text-caption font-weight-bold">{{ (course.instructorName || 'I').charAt(0) }}</span>
-              </VAvatar>
-              <span class="text-caption text-medium-emphasis text-truncate">
-                {{ course.instructorName || 'Instruktur' }}
-              </span>
+              <!-- Instructor Line -->
+              <div class="d-flex align-center ga-1-5 mb-2-5">
+                <VAvatar size="18" color="primary" variant="tonal" class="font-weight-bold" style="font-size: 0.65rem !important; min-width: 18px;">
+                  <VImg v-if="course.instructorAvatar && !course.instructorAvatar.includes('ui-avatars')" :src="course.instructorAvatar" />
+                  <span v-else>{{ (course.instructorName || 'I').charAt(0) }}</span>
+                </VAvatar>
+                <span class="text-caption text-medium-emphasis text-truncate" style="font-size: 0.76rem !important;">
+                  {{ course.instructorName || 'Instruktur' }}
+                </span>
+              </div>
             </div>
 
             <!-- Progress Indicator Section -->
-            <div class="mt-auto pt-2">
+            <div class="pt-1">
               <div class="d-flex justify-space-between align-center mb-1">
-                <span class="text-caption text-medium-emphasis font-weight-medium">Kemajuan Materi</span>
-                <span class="text-caption font-weight-bold" :class="course.progress === 100 ? 'text-success' : 'text-primary'">
+                <span class="text-caption text-medium-emphasis font-weight-medium" style="font-size: 0.75rem !important;">Kemajuan Materi</span>
+                <span class="text-caption font-weight-bold" :class="course.progress === 100 ? 'text-success' : 'text-primary'" style="font-size: 0.75rem !important;">
                   {{ course.completedTasks || 0 }} / {{ course.totalTasks || 0 }} Selesai
                 </span>
               </div>
               <VProgressLinear
                 :model-value="course.progress || 0"
                 :color="course.progress === 100 ? 'success' : 'primary'"
-                height="6"
+                height="5"
                 rounded
                 bg-opacity="0.15"
               />
@@ -429,39 +439,44 @@ function resolveChipColor(tag) {
           <VDivider />
 
           <!-- Card Actions Footer -->
-          <VCardActions class="pa-4 bg-background">
-            <div class="d-flex ga-2 w-100">
+          <VCardActions class="pa-2-5 px-3 bg-surface-variant-subtle">
+            <div class="d-flex align-center ga-2 w-100">
               <VBtn
                 v-if="course.progress === 100 || course.completed_at"
                 color="success"
                 variant="tonal"
+                size="small"
                 class="flex-grow-1 font-weight-medium"
+                prepend-icon="mdi-replay"
+                append-icon="mdi-arrow-right"
                 @click="goToLearning(course)"
               >
-                <VIcon start icon="mdi-replay" size="18" />
-                Ulas Kembali Materi
+                Ulas Materi
               </VBtn>
 
               <VBtn
                 v-else
                 color="primary"
                 variant="elevated"
+                size="small"
                 class="flex-grow-1 font-weight-medium"
+                prepend-icon="mdi-play-circle"
+                append-icon="mdi-arrow-right"
                 @click="goToLearning(course)"
               >
-                <VIcon start icon="mdi-play-circle" size="18" />
                 Lanjutkan Belajar
               </VBtn>
 
               <VBtn
                 variant="tonal"
                 color="default"
+                size="small"
                 icon
-                rounded="lg"
+                density="comfortable"
                 title="Lihat Detail Kursus"
                 :href="route('student.courses.show', course.slug || course.id)"
               >
-                <VIcon icon="mdi-information-outline" size="20" />
+                <VIcon icon="mdi-information-outline" size="18" />
               </VBtn>
             </div>
           </VCardActions>
@@ -534,9 +549,9 @@ function resolveChipColor(tag) {
   transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
 }
 .course-card:hover {
-  transform: translateY(-3px);
+  transform: translateY(-2px);
   border-color: rgba(var(--v-theme-primary), 0.4) !important;
-  box-shadow: 0 8px 24px -4px rgba(0, 0, 0, 0.08) !important;
+  box-shadow: 0 6px 18px -4px rgba(0, 0, 0, 0.08) !important;
 }
 
 .course-card-cover {
@@ -546,6 +561,21 @@ function resolveChipColor(tag) {
 
 .course-hover-title:hover {
   color: rgb(var(--v-theme-primary)) !important;
+}
+
+.bg-surface-variant-subtle {
+  background-color: rgba(var(--v-theme-on-surface), 0.03);
+}
+
+.pa-3-5 {
+  padding: 14px !important;
+}
+
+.line-clamp-1 {
+  display: -webkit-box;
+  -webkit-line-clamp: 1;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
 .line-clamp-2 {

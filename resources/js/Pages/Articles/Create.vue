@@ -4,9 +4,12 @@ import { useForm, Link } from '@inertiajs/vue3'
 import TiptapEditor from '@core/components/TiptapEditor.vue'
 
 const props = defineProps({
+  spaces: { type: Array, default: () => [] },
   categories: { type: Array, default: () => [] },
   tags: { type: Array, default: () => [] },
+  potentialParents: { type: Array, default: () => [] },
   canPublishDirectly: { type: Boolean, default: false },
+  defaultSpaceId: { type: Number, default: null },
 })
 
 const fileInputRef = ref(null)
@@ -15,6 +18,10 @@ const isDragging = ref(false)
 
 const form = useForm({
   title: '',
+  space_id: props.defaultSpaceId || (props.spaces[0]?.id ?? null),
+  parent_id: null,
+  review_cycle_days: 180,
+  order: 0,
   version: '1.0',
   excerpt: '',
   category_id: null,
@@ -570,6 +577,64 @@ const submit = () => {
             </div>
 
             <div class="pa-4">
+              <!-- Knowledge Space -->
+              <div v-if="spaces.length > 0" class="mb-3">
+                <label class="text-caption font-weight-bold text-medium-emphasis d-block mb-1">
+                  Knowledge Space (Ruang Kerja Tim)
+                </label>
+                <VSelect
+                  v-model="form.space_id"
+                  :items="spaces"
+                  item-title="name"
+                  item-value="id"
+                  placeholder="Pilih Knowledge Space"
+                  variant="outlined"
+                  density="compact"
+                  prepend-inner-icon="mdi-folder-multiple-outline"
+                  clearable
+                  :error-messages="form.errors.space_id"
+                />
+              </div>
+
+              <!-- Induk Dokumen (Parent SOP) -->
+              <div v-if="potentialParents.length > 0" class="mb-3">
+                <label class="text-caption font-weight-bold text-medium-emphasis d-block mb-1">
+                  Dokumen Induk (Opsional untuk Sub-Prosedur)
+                </label>
+                <VAutocomplete
+                  v-model="form.parent_id"
+                  :items="potentialParents"
+                  item-title="title"
+                  item-value="id"
+                  placeholder="Pilih SOP Induk (jika ini sub-prosedur)..."
+                  variant="outlined"
+                  density="compact"
+                  prepend-inner-icon="mdi-file-tree-outline"
+                  clearable
+                  :error-messages="form.errors.parent_id"
+                />
+              </div>
+
+              <!-- Siklus Review / Document Lifecycle -->
+              <div class="mb-3">
+                <label class="text-caption font-weight-bold text-medium-emphasis d-block mb-1">
+                  Masa Siklus Validasi Dokumen (Review Cycle)
+                </label>
+                <VSelect
+                  v-model="form.review_cycle_days"
+                  :items="[
+                    { title: '3 Bulan (90 Hari) - Kritis/Dinamis', value: 90 },
+                    { title: '6 Bulan (180 Hari) - Standar SOP', value: 180 },
+                    { title: '1 Tahun (365 Hari) - Regulasi Stabil', value: 365 },
+                  ]"
+                  item-title="title"
+                  item-value="value"
+                  variant="outlined"
+                  density="compact"
+                  prepend-inner-icon="mdi-history"
+                />
+              </div>
+
               <!-- Kategori -->
               <div class="mb-3">
                 <label class="text-caption font-weight-bold text-medium-emphasis d-block mb-1">

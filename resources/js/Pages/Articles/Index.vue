@@ -4,26 +4,32 @@ import { router, Link, usePage } from '@inertiajs/vue3'
 
 const props = defineProps({
   articles: { type: Object, required: true },
+  spaces: { type: Array, default: () => [] },
   categories: { type: Array, default: () => [] },
   tags: { type: Array, default: () => [] },
   filters: { type: Object, default: () => ({}) },
   canCreate: { type: Boolean, default: false },
   isSme: { type: Boolean, default: false },
   pendingReviewCount: { type: Number, default: 0 },
+  needsReviewCount: { type: Number, default: 0 },
 })
 
 const page = usePage()
 const search = ref(props.filters.search || '')
+const selectedSpace = ref(props.filters.space_id ? Number(props.filters.space_id) : null)
 const selectedCategory = ref(props.filters.category_id ? Number(props.filters.category_id) : null)
 const selectedTag = ref(props.filters.tag_id ? Number(props.filters.tag_id) : null)
 const selectedStatus = ref(props.filters.status || '')
+const onlyNeedsReview = ref(Boolean(props.filters.needs_review))
 
 const applyFilters = () => {
   router.get(route('articles.index'), {
     search: search.value || undefined,
+    space_id: selectedSpace.value || undefined,
     category_id: selectedCategory.value || undefined,
     tag_id: selectedTag.value || undefined,
     status: selectedStatus.value || undefined,
+    needs_review: onlyNeedsReview.value ? 1 : undefined,
   }, {
     preserveState: true,
     preserveScroll: true,
@@ -32,14 +38,21 @@ const applyFilters = () => {
 
 const resetFilters = () => {
   search.value = ''
+  selectedSpace.value = null
   selectedCategory.value = null
   selectedTag.value = null
   selectedStatus.value = ''
+  onlyNeedsReview.value = false
   applyFilters()
 }
 
 const resetSearch = () => {
   search.value = ''
+  applyFilters()
+}
+
+const filterBySpace = (spaceId) => {
+  selectedSpace.value = selectedSpace.value === spaceId ? null : spaceId
   applyFilters()
 }
 
@@ -55,6 +68,11 @@ const filterByTag = (tagId) => {
 
 const filterByStatus = (status) => {
   selectedStatus.value = selectedStatus.value === status ? '' : status
+  applyFilters()
+}
+
+const toggleNeedsReview = () => {
+  onlyNeedsReview.value = !onlyNeedsReview.value
   applyFilters()
 }
 
@@ -187,6 +205,71 @@ const isStaff = computed(() => {
       </div>
     </VAlert>
 
+    <!-- Enterprise Knowledge Spaces Horizontal Strip -->
+    <VCard
+      v-if="spaces.length > 0"
+      rounded="xl"
+      elevation="0"
+      border
+      class="pa-3 px-4 mb-4"
+    >
+      <div class="d-flex align-center justify-space-between flex-wrap ga-2 mb-2">
+        <div class="d-flex align-center ga-2">
+          <VIcon icon="mdi-folder-multiple-outline" size="18" color="primary" />
+          <span class="text-caption font-weight-bold text-high-emphasis">
+            Knowledge Spaces (Ruang Kerja Tim):
+          </span>
+        </div>
+        <Link
+          :href="route('spaces.index')"
+          class="text-caption text-primary text-decoration-none font-weight-medium d-flex align-center ga-1 hover-underline"
+        >
+          <span>Kelola Semua Spaces</span>
+          <VIcon icon="mdi-chevron-right" size="14" />
+        </Link>
+      </div>
+
+      <div class="d-flex align-center flex-wrap ga-2">
+        <VChip
+          :color="selectedSpace === null ? 'primary' : 'default'"
+          :variant="selectedSpace === null ? 'flat' : 'tonal'"
+          size="small"
+          rounded="lg"
+          class="cursor-pointer font-weight-medium"
+          @click="filterBySpace(null)"
+        >
+          Semua Spaces
+        </VChip>
+
+        <VChip
+          v-for="space in spaces"
+          :key="space.id"
+          :color="selectedSpace === space.id ? 'primary' : 'default'"
+          :variant="selectedSpace === space.id ? 'flat' : 'tonal'"
+          size="small"
+          rounded="lg"
+          class="cursor-pointer"
+          :prepend-icon="space.icon || 'mdi-folder-outline'"
+          @click="filterBySpace(space.id)"
+        >
+          {{ space.name }} ({{ space.articles_count || 0 }})
+        </VChip>
+
+        <VChip
+          v-if="needsReviewCount > 0"
+          :color="onlyNeedsReview ? 'warning' : 'default'"
+          :variant="onlyNeedsReview ? 'flat' : 'tonal'"
+          size="small"
+          rounded="lg"
+          prepend-icon="mdi-clock-alert-outline"
+          class="cursor-pointer font-weight-bold border-warning"
+          @click="toggleNeedsReview"
+        >
+          Masa Berlaku / Review Segera ({{ needsReviewCount }})
+        </VChip>
+      </div>
+    </VCard>
+
     <!-- Category & Governance Quick Filters -->
     <VCard
       rounded="xl"
@@ -300,11 +383,22 @@ const isStaff = computed(() => {
             class="h-100 d-flex flex-column article-card transition-all overflow-hidden"
           >
             <div class="pa-4 pb-2">
-              <!-- Top Badges: Category & Version -->
-              <div class="d-flex align-center justify-space-between mb-2">
-                <div class="d-flex align-center ga-1">
+              <!-- Top Badges: Space, Category & Version -->
+              <div class="d-flex align-center justify-space-between mb-2 flex-wrap ga-1">
+                <div class="d-flex align-center ga-1 flex-wrap">
                   <VChip
-                    v-if="article.category"
+                    v-if="article.space"
+                    size="x-small"
+                    variant="tonal"
+                    rounded="sm"
+                    :style="{ color: article.space.color || '#4F46E5', backgroundColor: (article.space.color || '#4F46E5') + '15' }"
+                    :prepend-icon="article.space.icon || 'mdi-folder-outline'"
+                    class="font-weight-medium"
+                  >
+                    {{ article.space.name }}
+                  </VChip>
+                  <VChip
+                    v-else-if="article.category"
                     size="x-small"
                     color="primary"
                     variant="tonal"
@@ -315,6 +409,16 @@ const isStaff = computed(() => {
                   </VChip>
                   <VChip size="x-small" variant="tonal" color="secondary" rounded="sm" class="font-weight-bold">
                     v{{ article.version || '1.0' }}
+                  </VChip>
+                  <VChip
+                    v-if="article.children_count > 0"
+                    size="x-small"
+                    color="primary"
+                    variant="outlined"
+                    prepend-icon="mdi-file-tree"
+                    rounded="sm"
+                  >
+                    {{ article.children_count }} sub-dok
                   </VChip>
                 </div>
 
@@ -368,6 +472,12 @@ const isStaff = computed(() => {
                     {{ article.attachments_count }}
                   </VChip>
                 </div>
+              </div>
+
+              <!-- Parent Document Breadcrumb if nested -->
+              <div v-if="article.parent" class="text-caption text-primary mb-1 d-flex align-center ga-1" style="font-size: 0.72rem;">
+                <VIcon icon="mdi-subdirectory-arrow-right" size="14" />
+                <span class="text-truncate">Induk: {{ article.parent.title }}</span>
               </div>
 
               <!-- Title -->

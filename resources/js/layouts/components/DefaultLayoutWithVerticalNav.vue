@@ -50,14 +50,7 @@ const tenantBranding = computed(() =>
  *   Nama agency/tenant dari master branding
  */
 const appTitle = computed(() => {
-  if (
-    isSuperAdmin.value ||
-    !tenantBranding.value?.agency_name
-  ) {
-    return themeConfig.app.title
-  }
-
-  return tenantBranding.value.agency_name
+  return tenantBranding.value?.agency_name || themeConfig.app.title || 'KMS Learning'
 })
 
 /*

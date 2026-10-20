@@ -4,6 +4,7 @@
 }
 
 html, body {
+  font-family: "Public Sans", sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif !important;
   font-size: 14px !important;
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
@@ -96,7 +97,7 @@ html, body {
 }
 
 // ==========================================
-// Main Menu Sidebar (Standard Small & Premium Skin)
+// Main Menu Sidebar (Standard Small, Dense & Premium Skin)
 // ==========================================
 .layout-vertical-nav {
   border-inline-end: 1px solid rgba(var(--v-border-color), 0.12) !important;
@@ -104,7 +105,7 @@ html, body {
 
   .nav-header {
     padding-inline: 1.25rem 0.75rem !important;
-    margin-block-end: 0.5rem;
+    margin-block-end: 0.25rem !important;
 
     .app-title {
       font-size: 1.15rem !important;
@@ -115,26 +116,35 @@ html, body {
 
   .nav-items {
     padding-inline: 0.5rem !important;
-    padding-block: 0.5rem !important;
+    padding-block: 0.25rem !important;
   }
 
-  // Nav Links & Group Labels
+  // Nav Links & Group Labels (Dense & Compact Spacing)
   .nav-link,
   .nav-group {
-    margin-block-end: 0.25rem !important;
+    margin-block: 0 !important;
+    margin-block-end: 3px !important;
+    padding-block: 0 !important;
+    padding-block-end: 0 !important;
 
     > a,
     > .nav-group-label {
-      min-height: 38px !important;
-      block-size: 38px !important;
+      min-height: 34px !important;
+      block-size: 34px !important;
+      height: 34px !important;
+      margin-block: 0 !important;
+      margin-block-end: 0 !important;
+      padding-block: 0 !important;
       padding-inline: 0.75rem !important;
-      border-radius: 8px !important;
-      margin-inline: 4px !important;
+      border-radius: 6px !important;
+      margin-inline: 2px !important;
       font-size: 0.8125rem !important; // 13px enterprise standard small
       font-weight: 500 !important;
       color: rgba(var(--v-theme-on-surface), 0.78) !important;
       text-decoration: none !important;
-      transition: all 0.18s ease-in-out !important;
+      transition: all 0.15s ease-in-out !important;
+      display: flex !important;
+      align-items: center !important;
 
       &::before {
         display: none !important;
@@ -146,7 +156,7 @@ html, body {
 
         .nav-item-icon {
           color: rgb(var(--v-theme-primary)) !important;
-          transform: translateX(2px);
+          transform: translateX(1px);
         }
       }
     }
@@ -154,23 +164,23 @@ html, body {
 
   // Item Icons
   .nav-item-icon {
-    font-size: 1.2rem !important;
-    width: 22px !important;
-    height: 22px !important;
-    min-width: 22px !important;
-    margin-inline-end: 0.75rem !important;
+    font-size: 1.15rem !important;
+    width: 20px !important;
+    height: 20px !important;
+    min-width: 20px !important;
+    margin-inline-end: 0.65rem !important;
     color: rgba(var(--v-theme-on-surface), 0.6) !important;
     display: inline-flex !important;
     align-items: center !important;
     justify-content: center !important;
-    transition: all 0.18s ease-in-out !important;
+    transition: all 0.15s ease-in-out !important;
   }
 
   // Item Title (Standard Small)
   .nav-item-title {
     font-size: 0.8125rem !important; // 13px standard small
     font-weight: 500 !important;
-    letter-spacing: 0.15px !important;
+    letter-spacing: 0.1px !important;
     line-height: 1.2 !important;
   }
 
@@ -179,7 +189,7 @@ html, body {
   .nav-link > a.router-link-exact-active {
     background: linear-gradient(135deg, rgb(var(--v-theme-primary)) 0%, rgba(var(--v-theme-primary), 0.88) 100%) !important;
     color: #ffffff !important;
-    box-shadow: 0 3px 10px rgba(var(--v-theme-primary), 0.32) !important;
+    box-shadow: 0 2px 6px rgba(var(--v-theme-primary), 0.28) !important;
 
     .nav-item-title {
       font-weight: 600 !important;
@@ -191,15 +201,30 @@ html, body {
     }
   }
 
-  // Submenu / Child Items
+  // Submenu / Child Items (Padat & Rapi)
   .nav-group-children {
-    padding-inline-start: 0.5rem !important;
-    margin-block-start: 0.2rem !important;
+    padding-inline-start: 0.65rem !important;
+    margin-block: 2px !important;
+    padding-block: 0 !important;
 
-    .nav-link > a {
-      min-height: 34px !important;
-      block-size: 34px !important;
+    .nav-link,
+    .nav-group {
+      margin-block: 0 !important;
+      margin-block-end: 2px !important;
+      padding-block: 0 !important;
+      padding-block-end: 0 !important;
+    }
+
+    .nav-link > a,
+    .nav-group > .nav-group-label {
+      min-height: 30px !important;
+      block-size: 30px !important;
+      height: 30px !important;
+      margin-block: 0 !important;
+      margin-block-end: 0 !important;
+      padding-block: 0 !important;
       padding-inline-start: 0.65rem !important;
+      padding-inline-end: 0.5rem !important;
       border-radius: 6px !important;
 
       .nav-item-title {
@@ -207,8 +232,11 @@ html, body {
       }
 
       .nav-item-icon {
-        font-size: 1rem !important;
-        margin-inline-end: 0.6rem !important;
+        font-size: 0.95rem !important;
+        width: 18px !important;
+        height: 18px !important;
+        min-width: 18px !important;
+        margin-inline-end: 0.5rem !important;
       }
     }
 
@@ -232,7 +260,7 @@ html, body {
 
   // Group Arrow
   .nav-group-arrow {
-    font-size: 1.1rem !important;
+    font-size: 1.05rem !important;
     color: rgba(var(--v-theme-on-surface), 0.5) !important;
     margin-inline-start: auto !important;
   }
@@ -256,3 +284,35 @@ html, body {
     border-bottom: 1px solid rgba(var(--v-border-color), 0.08) !important;
   }
 }
+
+// ==========================================
+// Standard Layout Footer Typography
+// ==========================================
+.layout-footer {
+  font-family: "Public Sans", sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif !important;
+  font-size: 0.8125rem !important;
+
+  .footer-wrap,
+  .footer-content-container,
+  .footer-text,
+  .footer-links,
+  .footer-link,
+  span,
+  a {
+    font-family: "Public Sans", sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif !important;
+    font-size: 0.8125rem !important;
+    line-height: 1.5 !important;
+  }
+
+  .footer-links a,
+  a.footer-link {
+    font-weight: 500 !important;
+    color: rgb(var(--v-theme-primary)) !important;
+    text-decoration: none !important;
+
+    &:hover {
+      text-decoration: underline !important;
+    }
+  }
+}
+

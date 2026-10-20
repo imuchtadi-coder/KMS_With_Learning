@@ -30,9 +30,16 @@ class InstructorCourseController extends Controller
         $draftCourses = Course::where('created_by', $user->id)->where('published', false)->count();
         $totalStudents = Enrollment::whereHas('course', fn($q) => $q->where('created_by', $user->id))->distinct('user_id')->count('user_id');
 
-        $recentCourses = Course::where('created_by', $user->id)->with('tenant')->latest()->paginate(6)->withQueryString();
+        $recentCourses = Course::where('created_by', $user->id)
+            ->with(['tenant', 'category', 'sections.lessons'])
+            ->withCount(['enrollments', 'quizzes', 'assignments'])
+            ->latest()
+            ->paginate(6)
+            ->withQueryString();
 
-        return Inertia::render('Instructor/Dashboard', compact('totalCourses', 'publishedCourses', 'draftCourses', 'totalStudents', 'recentCourses'));
+        $tenantName = $user->tenant?->branding?->agency_name ?? $user->tenant?->name ?? 'KMS Learning';
+
+        return Inertia::render('Instructor/Dashboard', compact('totalCourses', 'publishedCourses', 'draftCourses', 'totalStudents', 'recentCourses', 'tenantName'));
     }
 
     public function index()

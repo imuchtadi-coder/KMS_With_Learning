@@ -2,6 +2,8 @@
 import { ref, computed } from 'vue'
 import { useForm, Link } from '@inertiajs/vue3'
 import TiptapEditor from '@core/components/TiptapEditor.vue'
+import axios from 'axios'
+import { useDebounceFn } from '@vueuse/core'
 
 const props = defineProps({
   course: {
@@ -67,6 +69,26 @@ const isFormValid = computed(() => {
   if (isCourseSpecific.value && !form.course_id) return false
   return true
 })
+
+const similarDiscussions = ref([])
+const isCheckingSimilar = ref(false)
+
+const checkSimilarDiscussions = useDebounceFn(async (val) => {
+  const query = val?.trim() || ''
+  if (query.length < 3) {
+    similarDiscussions.value = []
+    return
+  }
+  isCheckingSimilar.value = true
+  try {
+    const res = await axios.get(route('discussions.check-similar'), { params: { title: query } })
+    similarDiscussions.value = res.data || []
+  } catch (err) {
+    similarDiscussions.value = []
+  } finally {
+    isCheckingSimilar.value = false
+  }
+}, 300)
 
 const submit = () => {
   form.post(route('discussions.store'), {
@@ -255,7 +277,51 @@ const submit = () => {
             :rules="[v => !!v || 'Judul pertanyaan wajib diisi']"
             :error-messages="form.errors.title"
             hide-details="auto"
+            @update:model-value="checkSimilarDiscussions"
           />
+
+          <!-- Anti-Duplication Live Suggestions Alert (Stack Overflow for Teams style) -->
+          <VAlert
+            v-if="similarDiscussions.length > 0"
+            type="info"
+            variant="tonal"
+            density="compact"
+            rounded="lg"
+            class="mt-2 border border-info"
+            prepend-icon="mdi-lightbulb-on-outline"
+          >
+            <div class="text-caption font-weight-bold mb-1">
+              Pertanyaan Serupa yang Mungkin Sudah Memiliki Solusi:
+            </div>
+            <div class="d-flex flex-column ga-1">
+              <div
+                v-for="sim in similarDiscussions"
+                :key="sim.id"
+                class="d-flex align-center justify-space-between flex-wrap ga-2 text-caption py-1 border-b last:border-b-0"
+              >
+                <Link
+                  :href="route('discussions.show', sim.id)"
+                  target="_blank"
+                  class="text-decoration-none font-weight-medium text-primary text-truncate hover-underline"
+                  style="max-width: 480px;"
+                >
+                  {{ sim.title }}
+                </Link>
+                <VChip
+                  v-if="sim.is_resolved"
+                  size="x-small"
+                  color="success"
+                  variant="flat"
+                  prepend-icon="mdi-check-circle"
+                >
+                  Solusi Terverifikasi
+                </VChip>
+                <span v-else class="text-caption text-medium-emphasis">
+                  {{ sim.replies_count || 0 }} Jawaban
+                </span>
+              </div>
+            </div>
+          </VAlert>
         </div>
 
         <!-- 4. Question Content (Rich Text Editor) -->

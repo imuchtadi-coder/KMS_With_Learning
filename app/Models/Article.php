@@ -16,6 +16,9 @@ class Article extends Model
 
     protected $fillable = [
         'tenant_id',
+        'space_id',
+        'parent_id',
+        'order',
         'title',
         'slug',
         'version',
@@ -24,17 +27,22 @@ class Article extends Model
         'category_id',
         'author_id',
         'status',
+        'review_cycle_days',
         'review_notes',
         'reviewed_by',
         'reviewed_at',
+        'next_review_at',
         'views_count',
         'published_at',
     ];
 
     protected $casts = [
+        'order' => 'integer',
+        'review_cycle_days' => 'integer',
         'views_count' => 'integer',
         'published_at' => 'datetime',
         'reviewed_at' => 'datetime',
+        'next_review_at' => 'datetime',
     ];
 
     protected static function boot()
@@ -55,6 +63,10 @@ class Article extends Model
 
             if ($article->status === 'published' && empty($article->published_at)) {
                 $article->published_at = now();
+                if (empty($article->next_review_at)) {
+                    $cycle = $article->review_cycle_days ?: 180;
+                    $article->next_review_at = now()->addDays($cycle);
+                }
             }
         });
     }
@@ -62,6 +74,21 @@ class Article extends Model
     public function tenant(): BelongsTo
     {
         return $this->belongsTo(Tenant::class, 'tenant_id', 'id');
+    }
+
+    public function space(): BelongsTo
+    {
+        return $this->belongsTo(KnowledgeSpace::class, 'space_id');
+    }
+
+    public function parent(): BelongsTo
+    {
+        return $this->belongsTo(Article::class, 'parent_id');
+    }
+
+    public function children(): HasMany
+    {
+        return $this->hasMany(Article::class, 'parent_id')->orderBy('order');
     }
 
     public function author(): BelongsTo
@@ -94,6 +121,11 @@ class Article extends Model
         return $this->hasMany(ArticleVersion::class)->orderBy('id', 'desc');
     }
 
+    public function reviewLogs(): HasMany
+    {
+        return $this->hasMany(ArticleReview::class)->latest();
+    }
+
     public function scopePublished($query)
     {
         return $query->where('status', 'published')
@@ -104,6 +136,13 @@ class Article extends Model
     public function scopePendingReview($query)
     {
         return $query->where('status', 'pending_review');
+    }
+
+    public function scopeNeedsReview($query)
+    {
+        return $query->where('status', 'published')
+            ->whereNotNull('next_review_at')
+            ->where('next_review_at', '<=', now()->addDays(14));
     }
 
     public function scopeForTenant($query, ?string $tenantId = null)

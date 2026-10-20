@@ -14,8 +14,21 @@ class UserProfileController extends Controller
      */
     public function show()
     {
-        $user = Auth::user()->load(['tenant', 'roles', 'enrollments.course', 'certificates']);
-        return Inertia::render('Profile/Show', compact('user'));
+        $user = Auth::user()->load([
+            'tenant',
+            'roles',
+            'enrollments.course',
+            'certificates',
+            'userSkills.skill',
+            'userSkills.endorsements.endorser:id,name',
+        ]);
+
+        $skillCatalog = \App\Models\Skill::query()
+            ->when(!$user->hasRole('superadmin'), fn($q) => $q->where('tenant_id', $user->tenant_id)->orWhereNull('tenant_id'))
+            ->orderBy('name')
+            ->get(['id', 'name', 'category', 'description']);
+
+        return Inertia::render('Profile/Show', compact('user', 'skillCatalog'));
     }
 
     /**

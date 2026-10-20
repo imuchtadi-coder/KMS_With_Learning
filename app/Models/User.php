@@ -132,4 +132,22 @@ class User extends Authenticatable
     {
         return $this->hasMany(Assignment::class, 'created_by');
     }
+
+    public function userSkills(): HasMany
+    {
+        return $this->hasMany(UserSkill::class);
+    }
+
+    public function skills(): BelongsToMany
+    {
+        return $this->belongsToMany(Skill::class, 'user_skills')
+            ->withPivot(['proficiency_level', 'endorsements_count', 'is_verified', 'verified_at'])
+            ->withTimestamps();
+    }
+
+    public function articles(): HasMany
+    {
+        return $this->hasMany(Article::class, 'author_id');
+    }
 }
+
